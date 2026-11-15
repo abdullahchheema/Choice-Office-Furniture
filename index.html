@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sweet Homes Furniture — Warm wood, quiet design</title>
+  <meta name="description" content="Sweet Homes Furniture crafts timeless, minimalist furniture in solid oak, walnut and ash. Designed to be lived in for generations.">
+  <meta name="theme-color" content="#F7F1E8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233B2A1E'/%3E%3Cpath d='M7 16.5 16 8l9 8.5V25H7z' fill='%23C8A06E'/%3E%3Crect x='13' y='17' width='6' height='8' rx='1' fill='%233B2A1E'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,700;1,9..144,800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/images/hero-wide.jpg" imagesrcset="assets/images/hero-wide-md.jpg 1200w, assets/images/hero-wide.jpg 2400w" imagesizes="100vw" fetchpriority="high">
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+
+<!-- ============ SVG SPRITE: furniture illustrations + icons ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- Lounge chair -->
+    <symbol id="art-lounge" viewBox="0 0 400 300">
+      <ellipse class="s-sh" cx="200" cy="270" rx="115" ry="8"/>
+      <path class="s-fabd" d="M118 100 Q200 66 282 100 L294 196 H106 Z"/>
+      <rect class="s-fab" x="130" y="102" width="140" height="86" rx="28"/>
+      <rect class="s-fabl" x="106" y="176" width="188" height="40" rx="16"/>
+      <rect class="s-wd" x="90" y="130" width="20" height="96" rx="9"/>
+      <rect class="s-wd" x="290" y="130" width="20" height="96" rx="9"/>
+      <line class="l-wd" x1="120" y1="222" x2="104" y2="266"/>
+      <line class="l-wd" x1="280" y1="222" x2="296" y2="266"/>
+    </symbol>
+
+    <!-- Icons (stroke, 24px) -->
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2.4l2.1 11h10.2l2-8H6.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="1.3" fill="currentColor"/><circle cx="17" cy="19.5" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7.7a4.2 4.2 0 0 1 7.5 2.5c0 5.7-7.5 10.3-7.5 10.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2.5 6.5h11v10h-11zM13.5 10h4l3 3v3.5h-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="17.5" r="1.8" fill="var(--cream)" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="17.5" r="1.8" fill="var(--cream)" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19c2-4 5-7 9-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.3 3 7.6 7 9 4-1.4 7-4.7 7-9V6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m9 12 2.3 2.3L15.5 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-return" viewBox="0 0 24 24"><path d="M5 9h10a4 4 0 0 1 0 8H8M8.5 5.5 5 9l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s6.5-5.7 6.5-11A6.5 6.5 0 0 0 5.5 10C5.5 15.300 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9L3.5 9.700l5.900-.8z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ============ HEADER ============ -->
+<header class="site-header" id="header">
+  <div class="container header-inner">
+    <a class="logo" href="#top" aria-label="Sweet Homes Furniture — home">
+      <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M7 16.500 16 8l9 8.500V25H7z" fill="var(--oak)"/><rect x="13" y="17" width="6" height="8" rx="1" fill="currentColor"/></svg>
+      <span class="logo-text"><span class="logo-name">Sweet Homes</span><span class="logo-sub">Furniture</span></span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Primary">
+      <ul>
+        <li><a href="#collections">Collections</a></li>
+        <li><a href="#shop">Shop</a></li>
+        <li><a href="#craft">Craftsmanship</a></li>
+        <li><a href="#finishes">Finishes</a></li>
+        <li><a href="#visit">Showroom</a></li>
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      <button class="icon-btn cart-btn" id="cartOpen" aria-label="Open cart, 0 items" aria-haspopup="dialog">
+        <svg class="icon" aria-hidden="true"><use href="#i-cart"/></svg>
+        <span class="cart-count" id="cartCount" aria-hidden="true">0</span>
+      </button>
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+        <svg class="icon icon-open" aria-hidden="true"><use href="#i-menu"/></svg>
+        <svg class="icon icon-close" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<!-- ============ HERO ============ -->
+<section class="hero" id="top">
+  <div class="hero-bg" id="heroBg" aria-hidden="true">
+    <img src="assets/images/hero-wide.jpg" srcset="assets/images/hero-wide-md.jpg 1200w, assets/images/hero-wide.jpg 2400w" sizes="100vw" width="2400" height="1600" fetchpriority="high" decoding="async" alt="">
+  </div>
+  <div class="hero-shade" aria-hidden="true"></div>
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow hero-eyebrow">Solid hardwood furniture · Since 1998</p>
+      <h1 class="hero-title" aria-label="Made from wood. Made for home.">
+        <span class="line"><span class="line-inner">Made from wood.</span></span>
+        <span class="line"><span class="line-inner"><em>Made for home.</em></span></span>
+      </h1>
+      <p class="hero-lede">Quiet, timeless pieces in solid oak, walnut and ash — shaped by hand, finished with natural oils, and designed to be lived in for generations.</p>
+      <div class="hero-cta">
+        <a class="btn btn--primary" href="#shop">Shop the collection <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn--ghost" href="#craft">Our craft</a>
+      </div>
+      <ul class="hero-points" aria-label="Highlights">
+        <li><strong>25-year</strong> guarantee</li>
+        <li><strong>Free</strong> white-glove delivery</li>
+        <li><strong>FSC</strong> certified timber</li>
+      </ul>
+    </div>
+
+    <div class="hero-visual">
+      <div class="hero-arch" id="heroArch">
+        <img class="parallax" data-depth="12" src="assets/images/hero.jpg" width="1000" height="1500" fetchpriority="high" decoding="async" alt="A cream bouclé sofa and a slatted wooden coffee table in warm morning light">
+      </div>
+      <div class="hero-tag" aria-hidden="true">
+        <span class="tag-dot"></span>
+        <span><strong>The Warm Living edit</strong><small>from $1,890</small></span>
+      </div>
+      <div class="hero-badge" aria-hidden="true"><span>Hand<br>finished</span></div>
+    </div>
+  </div>
+  <a class="scroll-cue" href="#trust" aria-label="Scroll to content"><span></span></a>
+</section>
+
+<!-- ============ TRUST STRIP ============ -->
+<section class="trust" id="trust" aria-label="Our promises">
+  <div class="container trust-grid">
+    <div class="trust-item" data-reveal><svg class="icon" aria-hidden="true"><use href="#i-truck"/></svg><div><h3>Free delivery</h3><p>White-glove, in-room setup</p></div></div>
+    <div class="trust-item" data-reveal style="--d:80ms"><svg class="icon" aria-hidden="true"><use href="#i-leaf"/></svg><div><h3>Responsible timber</h3><p>100% FSC certified</p></div></div>
+    <div class="trust-item" data-reveal style="--d:160ms"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><div><h3>25-year guarantee</h3><p>Built to last generations</p></div></div>
+    <div class="trust-item" data-reveal style="--d:240ms"><svg class="icon" aria-hidden="true"><use href="#i-return"/></svg><div><h3>100-night trial</h3><p>Easy, free returns</p></div></div>
+  </div>
+</section>
+
+<!-- ============ COLLECTIONS ============ -->
+<section class="section" id="collections">
+  <div class="container">
+    <header class="section-head" data-reveal>
+      <p class="eyebrow">Collections</p>
+      <h2>Rooms made <em>calm</em></h2>
+      <p class="section-sub">Four considered collections, each built around natural grain and honest joinery.</p>
+    </header>
+
+    <div class="collections-grid">
+      <a class="tile tile--lg" href="#shop" data-filter-link="living" data-reveal style="--tone:#E6D5BD">
+        <img class="tile-img" src="assets/images/sofa.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Cream sofa, walnut coffee table and brass floor lamp in a living room">
+        <div class="tile-meta"><h3>Living</h3><span>24 pieces</span></div>
+        <span class="tile-arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
+      </a>
+      <a class="tile" href="#shop" data-filter-link="dining" data-reveal style="--tone:#EADCC6;--d:90ms">
+        <img class="tile-img" src="assets/images/tile-dining.jpg" width="1200" height="1344" loading="lazy" decoding="async" alt="Honey-toned solid wood dining chairs around a matching table">
+        <div class="tile-meta"><h3>Dining</h3><span>18 pieces</span></div>
+        <span class="tile-arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
+      </a>
+      <a class="tile" href="#shop" data-filter-link="bedroom" data-reveal style="--tone:#E1CFB4;--d:180ms">
+        <img class="tile-img" src="assets/images/tile-bedroom.jpg" width="1200" height="802" loading="lazy" decoding="async" alt="Sunlit bedroom with a slim headboard, crisp white bedding and a bedside table">
+        <div class="tile-meta"><h3>Bedroom</h3><span>15 pieces</span></div>
+        <span class="tile-arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
+      </a>
+      <a class="tile tile--wide" href="#shop" data-filter-link="storage" data-reveal style="--tone:#EFE3CF;--d:270ms">
+        <img class="tile-img" src="assets/images/tile-storage.jpg" width="1200" height="1800" loading="lazy" decoding="async" alt="Light birch sideboard with open shelving, vases and a floating wall shelf">
+        <div class="tile-meta"><h3>Storage &amp; Light</h3><span>21 pieces</span></div>
+        <span class="tile-arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHOP ============ -->
+<section class="section section--tint" id="shop">
+  <div class="container">
+    <header class="section-head section-head--row" data-reveal>
+      <div>
+        <p class="eyebrow">Featured</p>
+        <h2>Pieces we <em>love</em></h2>
+      </div>
+      <div class="filters" role="group" aria-label="Filter products by room">
+        <button class="chip is-active" data-filter="all" aria-pressed="true">All</button>
+        <button class="chip" data-filter="living" aria-pressed="false">Living</button>
+        <button class="chip" data-filter="dining" aria-pressed="false">Dining</button>
+        <button class="chip" data-filter="bedroom" aria-pressed="false">Bedroom</button>
+        <button class="chip" data-filter="storage" aria-pressed="false">Storage</button>
+      </div>
+    </header>
+
+    <ul class="product-grid" id="productGrid">
+      <li class="card" data-cat="living" data-id="halden" data-name="Halden Sofa" data-price="1890" data-reveal>
+        <figure class="card-media" style="--tone:#E8D9C3">
+          <img src="assets/images/sofa.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Halden three-seat linen sofa" style="object-position:38% 50%">
+          <span class="badge">New</span>
+          <button class="wish" aria-pressed="false" aria-label="Save Halden Sofa to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Living</p><h3>Halden Sofa</h3></div><p class="price">$1,890</p></div>
+      </li>
+      <li class="card" data-cat="living" data-id="lund" data-name="Lund Lounge Chair" data-price="940" data-reveal style="--d:80ms">
+        <figure class="card-media" style="--tone:#E3D2B8">
+          <img src="assets/images/lounge.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Lund oak lounge chair with woven side panels and linen cushions" style="object-position:62% 50%">
+          <button class="wish" aria-pressed="false" aria-label="Save Lund Lounge Chair to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Living</p><h3>Lund Lounge Chair</h3></div><p class="price">$940</p></div>
+      </li>
+      <li class="card" data-cat="dining" data-id="oslo" data-name="Oslo Dining Table" data-price="1420" data-reveal style="--d:160ms">
+        <figure class="card-media" style="--tone:#EBDDC8">
+          <img src="assets/images/dining.jpg" width="900" height="1350" loading="lazy" decoding="async" alt="Oslo solid oak pedestal dining table with spindle-back chairs" style="object-position:70% 70%">
+          <span class="badge">Bestseller</span>
+          <button class="wish" aria-pressed="false" aria-label="Save Oslo Dining Table to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Dining</p><h3>Oslo Dining Table</h3></div><p class="price">$1,420</p></div>
+      </li>
+      <li class="card" data-cat="dining" data-id="nara" data-name="Nara Dining Chair" data-price="320" data-reveal>
+        <figure class="card-media" style="--tone:#E6D6BF">
+          <img src="assets/images/dining-chair.jpg" width="900" height="1285" loading="lazy" decoding="async" alt="Nara steam-bent wooden dining chair with a hand-woven paper-cord seat" style="object-position:50% 45%">
+          <button class="wish" aria-pressed="false" aria-label="Save Nara Dining Chair to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Dining</p><h3>Nara Dining Chair</h3></div><p class="price">$320</p></div>
+      </li>
+      <li class="card" data-cat="bedroom" data-id="ashby" data-name="Ashby Platform Bed" data-price="2260" data-reveal style="--d:80ms">
+        <figure class="card-media" style="--tone:#E2D0B6">
+          <img src="assets/images/bed.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Ashby platform bed with an oak headboard and soft white bedding" style="object-position:30% 60%">
+          <button class="wish" aria-pressed="false" aria-label="Save Ashby Platform Bed to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Bedroom</p><h3>Ashby Platform Bed</h3></div><p class="price">$2,260</p></div>
+      </li>
+      <li class="card" data-cat="bedroom" data-id="vale" data-name="Vale Bedside Table" data-price="380" data-reveal style="--d:160ms">
+        <figure class="card-media" style="--tone:#EADBC5">
+          <img class="lift" src="assets/images/nightstand.jpg" width="1200" height="1800" loading="lazy" decoding="async" alt="Vale solid wood bedside table with drawers beside a wooden bed" style="object-position:88% 82%">
+          <button class="wish" aria-pressed="false" aria-label="Save Vale Bedside Table to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Bedroom</p><h3>Vale Bedside Table</h3></div><p class="price">$380</p></div>
+      </li>
+      <li class="card" data-cat="storage" data-id="sture" data-name="Sture Open Shelf" data-price="1120" data-reveal>
+        <figure class="card-media" style="--tone:#EDE0CB">
+          <img src="assets/images/shelf.jpg" width="1200" height="800" loading="lazy" decoding="async" alt="Sture modular birch wall shelving with floating cabinets" style="object-position:28% 45%">
+          <button class="wish" aria-pressed="false" aria-label="Save Sture Open Shelf to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Storage</p><h3>Sture Open Shelf</h3></div><p class="price">$1,120</p></div>
+      </li>
+      <li class="card" data-cat="living storage" data-id="aria" data-name="Aria Table Lamp" data-price="260" data-reveal style="--d:80ms">
+        <figure class="card-media" style="--tone:#E4D3BA">
+          <img src="assets/images/lamp.jpg" width="900" height="1350" loading="lazy" decoding="async" alt="Aria ceramic table lamp glowing warmly on a wooden stool" style="object-position:70% 65%">
+          <span class="badge">Low stock</span>
+          <button class="wish" aria-pressed="false" aria-label="Save Aria Table Lamp to wishlist"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></button>
+          <button class="add" data-add>Add to cart</button>
+        </figure>
+        <div class="card-body"><div><p class="card-cat">Light</p><h3>Aria Table Lamp</h3></div><p class="price">$260</p></div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ CRAFT ============ -->
+<section class="section craft" id="craft">
+  <div class="container craft-grid">
+    <div class="craft-visual" data-reveal>
+      <div class="craft-photo">
+        <img src="assets/images/craft-1.jpg" width="900" height="1350" loading="lazy" decoding="async" alt="A craftsman hand-planing a curved walnut moulding at the workbench">
+      </div>
+      <div class="craft-inset">
+        <img src="assets/images/craft-2.jpg" width="1200" height="606" loading="lazy" decoding="async" alt="Close-up of a chisel carving fresh pine with curled shavings">
+      </div>
+      <div class="craft-stat">
+        <strong data-count="25">0</strong><span>year<br>guarantee</span>
+      </div>
+    </div>
+
+    <div class="craft-copy">
+      <p class="eyebrow" data-reveal>Craftsmanship</p>
+      <h2 data-reveal style="--d:60ms">Every ring tells <em>a story</em></h2>
+      <p class="lede" data-reveal style="--d:120ms">We choose slow-grown hardwood and join it the old way — mortise, tenon and dovetail — so each piece stays tight, true and beautiful for decades.</p>
+      <ul class="craft-list">
+        <li data-reveal style="--d:160ms"><span class="num">01</span><div><h3>Sourced responsibly</h3><p>Solid oak, walnut and ash from FSC-certified forests, kiln-dried for stability.</p></div></li>
+        <li data-reveal style="--d:220ms"><span class="num">02</span><div><h3>Joined by hand</h3><p>No shortcuts: traditional joinery, glued and pegged, then sanded to a silk finish.</p></div></li>
+        <li data-reveal style="--d:280ms"><span class="num">03</span><div><h3>Finished with oil</h3><p>Plant-based hardwax oils that let the grain breathe and age gracefully.</p></div></li>
+      </ul>
+      <dl class="stats" data-reveal style="--d:340ms">
+        <div><dt>Homes furnished</dt><dd><span data-count="12400">0</span>+</dd></div>
+        <div><dt>Master makers</dt><dd><span data-count="38">0</span></dd></div>
+        <div><dt>Certified timber</dt><dd><span data-count="100">0</span>%</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINISHES ============ -->
+<section class="section section--tint" id="finishes">
+  <div class="container finish-grid">
+    <div class="finish-stage" data-reveal>
+      <svg class="art finish-art" id="finishArt" viewBox="0 0 400 300" role="img" aria-label="Lund lounge chair shown in the selected wood finish"><use href="#art-lounge"/></svg>
+    </div>
+    <div class="finish-copy">
+      <p class="eyebrow" data-reveal>Finishes</p>
+      <h2 data-reveal style="--d:60ms">Choose your <em>wood</em></h2>
+      <p class="lede" data-reveal style="--d:120ms">Every piece is available in five natural finishes. Tap a swatch to see it on the Lund Lounge Chair.</p>
+
+      <fieldset class="swatches" data-reveal style="--d:180ms">
+        <legend class="sr-only">Wood finish</legend>
+        <label class="swatch"><input type="radio" name="finish" value="oak" checked><span class="swatch-dot" style="--c:#C8A06E"></span><span class="swatch-label">Natural Oak</span></label>
+        <label class="swatch"><input type="radio" name="finish" value="walnut"><span class="swatch-dot" style="--c:#7A5233"></span><span class="swatch-label">Smoked Walnut</span></label>
+        <label class="swatch"><input type="radio" name="finish" value="ash"><span class="swatch-dot" style="--c:#DCC9A8"></span><span class="swatch-label">Pale Ash</span></label>
+        <label class="swatch"><input type="radio" name="finish" value="cherry"><span class="swatch-dot" style="--c:#A4562F"></span><span class="swatch-label">Cherry</span></label>
+        <label class="swatch"><input type="radio" name="finish" value="ebony"><span class="swatch-dot" style="--c:#3E3028"></span><span class="swatch-label">Ebonised</span></label>
+      </fieldset>
+
+      <div class="finish-info" data-reveal style="--d:240ms" aria-live="polite">
+        <h3 id="finishName">Natural Oak</h3>
+        <p id="finishDesc">Light, open grain with honey undertones. Brightens a room and pairs with everything.</p>
+      </div>
+      <a class="btn btn--primary" href="#shop" data-reveal style="--d:300ms">Browse all pieces <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="section" id="stories">
+  <div class="container">
+    <header class="section-head" data-reveal>
+      <p class="eyebrow">Kind words</p>
+      <h2>Loved in <em>real homes</em></h2>
+    </header>
+    <div class="quotes">
+      <figure class="quote" data-reveal>
+        <div class="stars" role="img" aria-label="5 out of 5 stars"><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg></div>
+        <blockquote>“The Oslo table is the heart of our home. Two years on, it only looks better — every dinner leaves a little more character.”</blockquote>
+        <figcaption><span class="avatar" aria-hidden="true">M</span><span><strong>Maya R.</strong><small>Oslo Dining Table</small></span></figcaption>
+      </figure>
+      <figure class="quote" data-reveal style="--d:100ms">
+        <div class="stars" role="img" aria-label="5 out of 5 stars"><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg></div>
+        <blockquote>“Delivery was effortless, and the sofa is unbelievably comfortable. It feels calm and expensive without being fussy.”</blockquote>
+        <figcaption><span class="avatar" aria-hidden="true">D</span><span><strong>Daniel &amp; Priya</strong><small>Halden Sofa</small></span></figcaption>
+      </figure>
+      <figure class="quote" data-reveal style="--d:200ms">
+        <div class="stars" role="img" aria-label="5 out of 5 stars"><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg><svg class="icon" aria-hidden="true"><use href="#i-star"/></svg></div>
+        <blockquote>“I chose smoked walnut for the whole bedroom. The craftsmanship is obvious the moment you run your hand along the grain.”</blockquote>
+        <figcaption><span class="avatar" aria-hidden="true">S</span><span><strong>Sofia L.</strong><small>Ashby Bed &amp; Vale Table</small></span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VISIT / NEWSLETTER ============ -->
+<section class="visit" id="visit">
+  <div class="container visit-grid">
+    <div class="visit-copy" data-reveal>
+      <p class="eyebrow eyebrow--light">Showroom</p>
+      <h2>Come sit, touch, <em>stay a while</em></h2>
+      <p class="lede">Experience the grain and the comfort in person. Our showroom is open daily, and our team is happy to help you plan a room.</p>
+      <figure class="visit-photo">
+        <img src="assets/images/showroom.jpg" width="1200" height="795" loading="lazy" decoding="async" alt="Bright open-plan showroom with a cream lounge chair, oak floors and a long dining counter">
+      </figure>
+      <ul class="visit-info">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><span>214 Maple Row, Woodside<br>Open daily · 10:00 – 19:00</span></li>
+      </ul>
+    </div>
+    <form class="signup" id="signup" novalidate data-reveal style="--d:120ms">
+      <h3>Join the Sweet Homes letter</h3>
+      <p>New arrivals, care tips and 10% off your first order.</p>
+      <label for="email" class="sr-only">Email address</label>
+      <div class="field">
+        <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-describedby="emailMsg" required>
+        <button class="btn btn--light" type="submit">Subscribe</button>
+      </div>
+      <p class="form-msg" id="emailMsg" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a class="logo" href="#top" aria-label="Sweet Homes Furniture — back to top">
+        <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M7 16.500 16 8l9 8.500V25H7z" fill="var(--oak)"/><rect x="13" y="17" width="6" height="8" rx="1" fill="currentColor"/></svg>
+        <span class="logo-text"><span class="logo-name">Sweet Homes</span><span class="logo-sub">Furniture</span></span>
+      </a>
+      <p>Warm wood. Quiet design.<br>Furniture for a lifetime of home.</p>
+    </div>
+    <nav aria-label="Shop"><h4>Shop</h4><ul><li><a href="#shop">Living</a></li><li><a href="#shop">Dining</a></li><li><a href="#shop">Bedroom</a></li><li><a href="#shop">Storage &amp; Light</a></li></ul></nav>
+    <nav aria-label="Company"><h4>Company</h4><ul><li><a href="#craft">Craftsmanship</a></li><li><a href="#finishes">Finishes</a></li><li><a href="#stories">Reviews</a></li><li><a href="#visit">Showroom</a></li></ul></nav>
+    <nav aria-label="Help"><h4>Help</h4><ul><li><a href="#trust">Delivery</a></li><li><a href="#trust">Returns</a></li><li><a href="#trust">Guarantee</a></li><li><a href="#visit">Contact</a></li></ul></nav>
+  </div>
+  <div class="container footer-bottom">
+    <p>© <span id="year">2026</span> Sweet Homes Furniture. All rights reserved.</p>
+    <p>Crafted with care · Photography via <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a></p>
+  </div>
+</footer>
+
+<!-- ============ CART DRAWER ============ -->
+<div class="overlay" id="overlay" hidden></div>
+<aside class="drawer" id="cart" role="dialog" aria-modal="true" aria-labelledby="cartTitle" aria-hidden="true" tabindex="-1">
+  <header class="drawer-head">
+    <h2 id="cartTitle">Your cart</h2>
+    <button class="icon-btn" id="cartClose" aria-label="Close cart"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+  </header>
+  <div class="drawer-body">
+    <p class="cart-empty" id="cartEmpty">Your cart is empty.<br><a href="#shop" data-close-cart>Find something you’ll love →</a></p>
+    <ul class="cart-list" id="cartList"></ul>
+  </div>
+  <footer class="drawer-foot" id="cartFoot" hidden>
+    <div class="subtotal"><span>Subtotal</span><strong id="cartTotal">$0</strong></div>
+    <p class="note">Free delivery &amp; setup included.</p>
+    <button class="btn btn--primary btn--block" id="checkoutBtn">Checkout</button>
+  </footer>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
