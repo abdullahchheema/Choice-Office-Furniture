@@ -5,13 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/layout/SvgSprite";
 import { useCart } from "@/components/providers/CartProvider";
 import { useToast } from "@/components/providers/ToastProvider";
-import { formatPrice } from "@/lib/catalog";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function CartDrawer() {
-  const { items, subtotal, isOpen, close, setQty, remove } = useCart();
+  const { items, subtotalLabel, isOpen, close, setQty, remove } = useCart();
   const { toast } = useToast();
 
   const drawerRef = useRef<HTMLElement | null>(null);
@@ -143,19 +142,23 @@ export function CartDrawer() {
                */
               <li className="cart-item" key={product.id}>
                 <div className="cart-thumb">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- see Hero.tsx: plain img for the fidelity phase */}
-                  <img
-                    src={product.image.src}
-                    alt=""
-                    width={84}
-                    height={84}
-                    style={{ objectPosition: product.image.objectPosition }}
-                  />
+                  {product.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- see Hero.tsx: plain img for the fidelity phase
+                    <img
+                      src={product.image.src}
+                      alt=""
+                      width={84}
+                      height={84}
+                      style={{
+                        objectPosition: product.image.objectPosition ?? "50% 50%",
+                      }}
+                    />
+                  ) : null}
                 </div>
 
                 <div>
                   <h3>{product.name}</h3>
-                  <p className="unit">{formatPrice(product.price)}</p>
+                  <p className="unit">{product.priceLabel}</p>
                   <div className="qty" role="group">
                     <button
                       type="button"
@@ -176,7 +179,7 @@ export function CartDrawer() {
                 </div>
 
                 <div className="cart-line">
-                  <span>{formatPrice(product.price * qty)}</span>
+                  <span>{lineTotal(product.priceValue, qty)}</span>
                   <button
                     type="button"
                     className="remove"
@@ -194,7 +197,7 @@ export function CartDrawer() {
         <footer className="drawer-foot" hidden={isEmpty}>
           <div className="subtotal">
             <span>Subtotal</span>
-            <strong>{formatPrice(subtotal)}</strong>
+            <strong>{subtotalLabel}</strong>
           </div>
           <p className="note">Free delivery &amp; setup included.</p>
           <button
@@ -211,4 +214,10 @@ export function CartDrawer() {
       </aside>
     </>
   );
+}
+
+/** Line total, formatted the same way the server formats every other amount. */
+function lineTotal(priceValue: string, qty: number): string {
+  const total = Number(priceValue) * qty;
+  return `Rs. ${new Intl.NumberFormat("en-US").format(Math.round(total))}`;
 }

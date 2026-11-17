@@ -2,30 +2,30 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
-import { PRODUCTS_BY_ID, type Product } from "@/lib/catalog";
-import { usePersistentState } from "@/lib/hooks";
 import { useToast } from "@/components/providers/ToastProvider";
+import { usePersistentState } from "@/lib/hooks";
+import type { CartCatalogEntry } from "@/lib/queries";
 
 /**
  * A stored line holds an id and a quantity and nothing else.
  *
- * Prices are never persisted. The original kept them out of storage too, but
- * only incidentally — it re-read them from the DOM. Here it is the deliberate
- * trust boundary that carries into Phase 5: the client says what and how many,
- * the server decides what it costs.
+ * Prices are never persisted. The catalog is supplied by the server on every
+ * render, so a price changed in the admin shows immediately and a cart saved
+ * last week can never display a stale amount. Phase 5's checkout re-prices
+ * from the database again regardless — the client is never trusted with money.
  */
 export type CartLine = { id: string; qty: number };
 
-/** Namespaced and versioned. Product ids become database ids in Phase 3, so a
- *  cart saved today must be discarded rather than silently mis-resolved. */
-const STORAGE_KEY = "cof-cart-v1";
+/** Namespaced and versioned: product ids changed shape when the database
+ *  arrived, so anything saved under an older key is discarded, not misread. */
+const STORAGE_KEY = "cof-cart-v2";
+
+type CartItem = { product: CartCatalogEntry; qty: number };
 
 type CartContextValue = {
-  lines: CartLine[];
-  /** Lines joined to their product, with anything unresolvable dropped. */
-  items: { product: Product; qty: number }[];
+  items: CartItem[];
   count: number;
-  subtotal: number;
+  subtotalLabel: string;
   hydrated: boolean;
   isOpen: boolean;
   open: () => void;
@@ -37,31 +37,50 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  catalog,
+  currencySymbol = "Rs.",
+  children,
+}: {
+  catalog: CartCatalogEntry[];
+  currencySymbol?: string;
+  children: React.ReactNode;
+}) {
   const [lines, setLines, hydrated] = usePersistentState<CartLine[]>(STORAGE_KEY, []);
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
+  const byId = useMemo(
+    () => new Map(catalog.map((entry) => [entry.id, entry])),
+    [catalog],
+  );
+
+  /* Lines whose product has since been unpublished or deleted simply drop out
+     rather than rendering as a broken row. */
   const items = useMemo(
     () =>
       lines
         .map((line) => {
-          const product = PRODUCTS_BY_ID.get(line.id);
+          const product = byId.get(line.id);
           return product ? { product, qty: line.qty } : null;
         })
-        .filter((entry): entry is { product: Product; qty: number } => entry !== null),
-    [lines],
+        .filter((entry): entry is CartItem => entry !== null),
+    [lines, byId],
   );
 
   const count = useMemo(() => items.reduce((n, i) => n + i.qty, 0), [items]);
-  const subtotal = useMemo(
-    () => items.reduce((n, i) => n + i.product.price * i.qty, 0),
-    [items],
-  );
+
+  const subtotalLabel = useMemo(() => {
+    const total = items.reduce(
+      (sum, item) => sum + Number(item.product.priceValue) * item.qty,
+      0,
+    );
+    return `${currencySymbol} ${new Intl.NumberFormat("en-US").format(Math.round(total))}`;
+  }, [items, currencySymbol]);
 
   const add = useCallback(
     (id: string) => {
-      const product = PRODUCTS_BY_ID.get(id);
+      const product = byId.get(id);
       if (!product) return;
       setLines((current) => {
         const existing = current.find((line) => line.id === id);
@@ -71,7 +90,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
       toast(`${product.name} added to your cart`);
     },
-    [setLines, toast],
+    [byId, setLines, toast],
   );
 
   const setQty = useCallback(
@@ -90,10 +109,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      lines,
       items,
       count,
-      subtotal,
+      subtotalLabel,
       hydrated,
       isOpen,
       open: () => setIsOpen(true),
@@ -102,7 +120,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setQty,
       remove,
     }),
-    [lines, items, count, subtotal, hydrated, isOpen, add, setQty, remove],
+    [items, count, subtotalLabel, hydrated, isOpen, add, setQty, remove],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

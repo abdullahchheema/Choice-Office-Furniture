@@ -58,6 +58,15 @@ npm run db:deploy     # apply migrations in production
 
 Prisma's CLI and client are pinned to the **same exact version (7.10.1)** on purpose: npm's `latest` tag for the `prisma` CLI is currently an `8.0.0` release candidate while `@prisma/client` is on stable `7.10.1`, so an unpinned install produces a CLI/client mismatch. Change both together or neither.
 
+### Prisma 7 differences worth knowing
+
+Prisma 7 moved things that most tutorials still show in the old places:
+
+- **`url` and `directUrl` are gone from `schema.prisma`.** The CLI's connection lives in `prisma.config.ts` and points at `DIRECT_URL`; the app's connection comes from a **driver adapter** in `lib/prisma.ts` and points at the pooled `DATABASE_URL`. That split is deliberate — migrations cannot run through Supabase's transaction pooler.
+- **The CLI does not read `.env` files.** `prisma.config.ts` loads `.env.local` explicitly via dotenv.
+- **The seed command** is `migrations.seed` in `prisma.config.ts`, not `prisma.seed` in `package.json`.
+- **`prisma migrate diff`** takes `--to-schema`, not the older `--to-schema-datamodel`.
+
 ## Layout
 
 ```

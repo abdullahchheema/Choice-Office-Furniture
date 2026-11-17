@@ -1,0 +1,463 @@
+// Choice Office Furniture — data model
+//
+// Two rules run through the whole schema:
+//   1. Money is always Decimal(12,2). Never Float, and never arithmetic in JS
+//      numbers — see lib/money.ts.
+//   2. Orders keep snapshots. An order line stores the product's name, SKU and
+//      price as they were at purchase, so editing or deleting a product later
+//      cannot rewrite history.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 removed `url` and `directUrl` from the schema. The CLI's connection
+// now lives in prisma.config.ts (pointed at DIRECT_URL, since migrations cannot
+// run through the transaction pooler), and the runtime connection is supplied
+// by the driver adapter in lib/prisma.ts (pointed at the pooled DATABASE_URL).
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── enums ─────────────────────────────
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  PROCESSING
+  READY_FOR_DISPATCH
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum InventoryReason {
+  INITIAL_STOCK
+  ORDER_CONFIRMED // negative: an order moved to CONFIRMED
+  ORDER_CANCELLED // positive: a confirmed order was cancelled
+  MANUAL_ADJUSTMENT
+  STOCK_RECEIVED
+  DAMAGE_WRITE_OFF
+  STOCKTAKE_CORRECTION
+}
+
+// ───────────────────────────── auth ─────────────────────────────
+
+model AdminUser {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  name         String
+  passwordHash String
+  isActive     Boolean @default(true)
+
+  /// Incremented on password change or "sign out everywhere". The session JWT
+  /// carries a copy, and requireAdmin() compares them — which is how a
+  /// stateless token can still be revoked immediately.
+  sessionEpoch Int       @default(0)
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusChanges  OrderStatusHistory[]
+  inventoryMoves InventoryTransaction[]
+
+  @@map("admin_users")
+}
+
+// ─────────────────────────── catalog ───────────────────────────
+
+model Category {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String?
+
+  /// Backdrop behind the tile photo — the inline `--tone` from the original.
+  toneHex   String? @db.VarChar(9)
+  imagePath String?
+
+  sortOrder       Int     @default(0)
+  isActive        Boolean @default(true)
+  /// Flat categories plus this flag satisfy "control category display on the
+  /// homepage" without needing a parent/child relation.
+  showOnHomepage  Boolean @default(false)
+  homepageBlurb   String?
+
+  metaTitle       String?
+  metaDescription String? @db.VarChar(320)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([isActive, sortOrder])
+  @@index([showOnHomepage, sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id               String  @id @default(cuid())
+  slug             String  @unique
+  sku              String  @unique
+  name             String
+  shortDescription String? @db.VarChar(320)
+  description      String?
+
+  price          Decimal  @db.Decimal(12, 2)
+  /// Original price, shown struck through when set. Must exceed `price`.
+  compareAtPrice Decimal? @db.Decimal(12, 2)
+  currency       String   @default("PKR") @db.VarChar(3)
+
+  stockQuantity     Int     @default(0)
+  lowStockThreshold Int     @default(3)
+  trackInventory    Boolean @default(true)
+
+  status      ProductStatus @default(DRAFT)
+  isFeatured  Boolean       @default(false)
+  isBestseller Boolean      @default(false)
+  badge       String?       @db.VarChar(32)
+  sortOrder   Int           @default(0)
+
+  /// Presentation knobs carried over from the hand-tuned cards. They are
+  /// columns, not CSS, so the admin keeps per-product control of them.
+  toneHex             String? @db.VarChar(9)
+  imageObjectPosition String? @db.VarChar(24)
+  imageLift           Boolean @default(false)
+
+  // Office-furniture attributes
+  material         String?
+  dimensions       String?
+  weightKg         Decimal? @db.Decimal(8, 2)
+  warrantyMonths   Int?
+  assemblyRequired Boolean  @default(true)
+
+  metaTitle       String?
+  metaDescription String? @db.VarChar(320)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  images     ProductImage[]
+  orderItems OrderItem[]
+  inventory  InventoryTransaction[]
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Equality columns first so Postgres can satisfy the ORDER BY from the index.
+  @@index([status, categoryId, price])
+  @@index([status, price])
+  @@index([status, isFeatured, sortOrder])
+  @@index([status, isBestseller, sortOrder])
+  @@index([status, createdAt])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// The storage KEY, never a full URL — that is what makes the storage driver
+  /// swappable without a data migration.
+  storagePath    String
+  altText        String
+  width          Int?
+  height         Int?
+  bytes          Int?
+  mimeType       String  @db.VarChar(64)
+  objectPosition String? @db.VarChar(24)
+  sortOrder      Int     @default(0)
+  isPrimary      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([productId, storagePath])
+  @@index([productId, sortOrder])
+  @@map("product_images")
+}
+
+// ────────────────────── customers and orders ──────────────────────
+
+model Customer {
+  /// E.164, the dedupe key and the WhatsApp dial string: "+923001234567".
+  phoneE164 String  @unique @db.VarChar(20)
+  /// Exactly what the customer typed, which the shop owner recognises.
+  phoneRaw  String  @db.VarChar(32)
+  id        String  @id @default(cuid())
+  name      String
+  email     String?
+  notes     String?
+
+  addressLine String?
+  city        String?
+  province    String?
+  postalCode  String? @db.VarChar(16)
+
+  orderCount  Int       @default(0)
+  lastOrderAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("customers")
+}
+
+model Order {
+  id          String @id @default(cuid())
+  orderNumber String @unique @db.VarChar(20)
+
+  /// Minted by the cart and submitted with the form, so a double-click, a
+  /// retried POST and a second tab all carry the same key and return the
+  /// original order instead of creating another.
+  idempotencyKey String? @unique @db.VarChar(64)
+
+  status OrderStatus @default(PENDING_CONFIRMATION)
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  /// Contact and address snapshot — survives the customer record being edited
+  /// or erased, which is why these duplicate Customer.
+  customerName       String
+  customerPhone      String  @db.VarChar(32)
+  customerPhoneE164  String  @db.VarChar(20)
+  customerEmail      String?
+  shippingAddress    String
+  shippingCity       String
+  shippingProvince   String?
+  shippingPostalCode String? @db.VarChar(16)
+  customerNote       String?
+
+  currency    String  @default("PKR") @db.VarChar(3)
+  subtotal    Decimal @db.Decimal(12, 2)
+  shippingFee Decimal @default(0) @db.Decimal(12, 2)
+  discount    Decimal @default(0) @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(12, 2)
+  itemCount   Int
+
+  whatsappMessage  String?
+  /// Stamped by a beacon when the customer actually opens WhatsApp. Orders
+  /// where this stays null are leads to phone, not failures.
+  whatsappOpenedAt DateTime?
+
+  /// True once stock has been removed. The stock effect keys off this flag
+  /// rather than being inferred from status, so an unusual transition cannot
+  /// double-apply.
+  stockCommitted Boolean @default(false)
+
+  adminNote    String?
+  confirmedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items     OrderItem[]
+  history   OrderStatusHistory[]
+  inventory InventoryTransaction[]
+
+  @@index([status, createdAt])
+  @@index([customerPhoneE164])
+  @@index([createdAt])
+  @@index([customerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// Nullable + SetNull on purpose. Cascade would delete order history when a
+  /// discontinued product is removed; Restrict would make products
+  /// undeletable, pushing admins to edit an old product into a new one —
+  /// exactly the mutation these snapshots exist to prevent.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // ---- immutable snapshot, written once ----
+  productName  String
+  productSku   String  @db.VarChar(64)
+  productSlug  String
+  categoryName String
+  unitPrice    Decimal @db.Decimal(12, 2)
+  quantity     Int
+  lineTotal    Decimal @db.Decimal(12, 2)
+  imagePath    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  note       String?
+
+  changedById String?
+  changedBy   AdminUser? @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  /// Snapshot of who acted, so deleting a staff account does not erase the
+  /// audit trail. "customer" and "system" are also valid values.
+  changedByLabel String @default("system")
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+model InventoryTransaction {
+  id        String @id @default(cuid())
+  productId String
+  /// Restrict, deliberately asymmetric with OrderItem: the ledger has to
+  /// reconcile against Product.stockQuantity, so a stocked product is archived
+  /// rather than hard-deleted.
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  /// Signed: negative removes stock, positive adds.
+  quantityDelta Int
+  reason        InventoryReason
+  /// Balance after this entry, so stock is auditable without replaying the
+  /// whole ledger.
+  resultingQuantity Int
+  note              String?
+
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  createdById String?
+  createdBy   AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  /// The database-level proof against double-decrement. If the row lock and
+  /// the stockCommitted flag are ever both defeated by a code change, this
+  /// throws instead of letting stock drift silently.
+  @@unique([orderId, productId, reason], name: "uniq_order_product_reason")
+  @@index([productId, createdAt])
+  @@index([reason, createdAt])
+  @@map("inventory_transactions")
+}
+
+// ───────────────────────── config and content ─────────────────────────
+
+/// Single row, not key/value: typed columns, one cached query, and NOT NULL on
+/// the WhatsApp number the entire checkout depends on. A missing key in a KV
+/// design is a runtime undefined discovered in production.
+model WebsiteSetting {
+  id String @id @default("singleton")
+
+  brandName String  @default("Choice Office Furniture")
+  tagline   String?
+  logoPath  String?
+  faviconPath String?
+
+  /// Where orders are sent. Editable in admin — never hardcoded.
+  whatsappE164    String @db.VarChar(20)
+  whatsappDisplay String @db.VarChar(32)
+  phone           String?
+  email           String?
+  addressLine     String?
+  city            String?
+  mapUrl          String?
+  openingHours    String?
+
+  currencyCode          String   @default("PKR") @db.VarChar(3)
+  currencySymbol        String   @default("Rs.") @db.VarChar(8)
+  shippingFee           Decimal  @default(0) @db.Decimal(12, 2)
+  freeShippingThreshold Decimal? @db.Decimal(12, 2)
+  shippingNote          String?
+
+  facebookUrl  String?
+  instagramUrl String?
+  linkedinUrl  String?
+  whatsappUrl  String?
+
+  metaTitle       String?
+  metaDescription String? @db.VarChar(320)
+  ogImagePath     String?
+
+  deliveryPolicy String?
+  returnPolicy   String?
+  privacyPolicy  String?
+  termsPolicy    String?
+
+  orderNumberPrefix  String  @default("ORD") @db.VarChar(8)
+  lowStockAlertEmail String?
+  maintenanceMode    Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("website_settings")
+}
+
+/// Per-year counter for human-readable order numbers (ORD-2026-0001).
+/// Incremented with INSERT … ON CONFLICT DO UPDATE … RETURNING, which is
+/// atomic under concurrency — unlike COUNT(*)+1, which races.
+model OrderSequence {
+  year      Int @id
+  lastValue Int @default(0)
+
+  @@map("order_sequences")
+}
+
+model HomepageSection {
+  id        String  @id @default(cuid())
+  key       String  @unique @db.VarChar(40)
+  isVisible Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  eyebrow    String?
+  heading    String?
+  subheading String?
+  bodyText   String?
+  ctaLabel   String?
+  ctaHref    String?
+  imagePath  String?
+
+  /// Section-specific extras, validated by a Zod discriminated union on `key`.
+  payload Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isVisible, sortOrder])
+  @@map("homepage_sections")
+}
+
+/// Fixed-window rate limiting without Redis. The key is a hash, so this table
+/// is not a log of visitor IP addresses.
+model RateLimitHit {
+  id          String   @id @default(cuid())
+  bucketKey   String   @db.VarChar(128)
+  windowStart DateTime
+  count       Int      @default(1)
+
+  @@unique([bucketKey, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit_hits")
+}

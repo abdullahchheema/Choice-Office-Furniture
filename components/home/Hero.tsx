@@ -24,11 +24,11 @@ export function Hero() {
       <div className="hero-bg" ref={backgroundRef} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/assets/images/hero-wide.jpg"
-          srcSet="/assets/images/hero-wide-md.jpg 1200w, /assets/images/hero-wide.jpg 2400w"
+          src="/assets/images/office/hero-wide.jpg"
+          srcSet="/assets/images/office/hero-wide-md.jpg 1200w, /assets/images/office/hero-wide.jpg 2400w"
           sizes="100vw"
           width={2400}
-          height={1600}
+          height={1348}
           fetchPriority="high"
           decoding="async"
           alt=""
@@ -40,28 +40,27 @@ export function Hero() {
       <div className="shell hero-inner">
         <div className="hero-copy">
           <p className="eyebrow hero-eyebrow">
-            Solid hardwood furniture · Since 1998
+            Office furniture · Since 1998
           </p>
 
           {/*
             The visible text is split across masked spans for the line reveal,
             so aria-label restores it as one readable string.
           */}
-          <h1 className="hero-title" aria-label="Made from wood. Made for home.">
+          <h1 className="hero-title" aria-label="Built for work. Made to last.">
             <span className="line">
-              <span className="line-inner">Made from wood.</span>
+              <span className="line-inner">Built for work.</span>
             </span>
             <span className="line">
               <span className="line-inner">
-                <em>Made for home.</em>
+                <em>Made to last.</em>
               </span>
             </span>
           </h1>
 
           <p className="hero-lede">
-            Quiet, timeless pieces in solid oak, walnut and ash — shaped by hand,
-            finished with natural oils, and designed to be lived in for
-            generations.
+            Executive seating, ergonomic chairs, desks and boardroom tables —
+            built from solid materials and installed across Pakistan.
           </p>
 
           <div className="hero-cta">
@@ -75,13 +74,13 @@ export function Hero() {
 
           <ul className="hero-points" aria-label="Highlights">
             <li>
-              <strong>25-year</strong> guarantee
+              <strong>5-year</strong> guarantee
             </li>
             <li>
               <strong>Free</strong> white-glove delivery
             </li>
             <li>
-              <strong>FSC</strong> certified timber
+              <strong>Nationwide</strong> installation
             </li>
           </ul>
         </div>
@@ -93,19 +92,19 @@ export function Hero() {
               ref={archRef}
               className="parallax"
               data-depth="12"
-              src="/assets/images/hero.jpg"
-              width={1000}
-              height={1500}
+              src="/assets/images/office/chair-executive.jpg"
+              width={1400}
+              height={1750}
               fetchPriority="high"
               decoding="async"
-              alt="A cream bouclé sofa and a slatted wooden coffee table in warm morning light"
+              alt="Meridian executive chair in tan leather beside a maple desk"
             />
           </div>
           <div className="hero-tag" aria-hidden="true">
             <span className="tag-dot" />
             <span>
-              <strong>The Warm Living edit</strong>
-              <small>from $1,890</small>
+              <strong>Meridian Executive</strong>
+              <small>from Rs. 48,500</small>
             </span>
           </div>
           <div className="hero-badge" aria-hidden="true">

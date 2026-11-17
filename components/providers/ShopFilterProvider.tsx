@@ -2,9 +2,8 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 
-import type { ProductCategory } from "@/lib/catalog";
-
-export type FilterValue = "all" | ProductCategory;
+/** "all", or a category slug. */
+export type FilterValue = string;
 
 type ShopFilterContextValue = {
   filter: FilterValue;

@@ -2,17 +2,17 @@
 
 import { createContext, useCallback, useContext, useMemo } from "react";
 
-import { PRODUCTS_BY_ID } from "@/lib/catalog";
-import { usePersistentState } from "@/lib/hooks";
 import { useToast } from "@/components/providers/ToastProvider";
+import { usePersistentState } from "@/lib/hooks";
 
-const STORAGE_KEY = "cof-wishlist-v1";
+const STORAGE_KEY = "cof-wishlist-v2";
 
 type WishlistContextValue = {
-  ids: string[];
   hydrated: boolean;
   has: (id: string) => boolean;
-  toggle: (id: string) => void;
+  /** The name is passed in by the caller, which already has it, rather than
+   *  this provider holding a second copy of the catalog. */
+  toggle: (id: string, productName?: string) => void;
 };
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
@@ -24,17 +24,18 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const has = useCallback((id: string) => ids.includes(id), [ids]);
 
   const toggle = useCallback(
-    (id: string) => {
-      const product = PRODUCTS_BY_ID.get(id);
+    (id: string, productName?: string) => {
       setIds((current) => {
-        const next = current.includes(id)
-          ? current.filter((entry) => entry !== id)
-          : [...current, id];
-        if (product) {
+        const saving = !current.includes(id);
+        const next = saving
+          ? [...current, id]
+          : current.filter((entry) => entry !== id);
+
+        if (productName) {
           toast(
-            next.includes(id)
-              ? `Saved ${product.name} to your wishlist`
-              : `Removed ${product.name} from wishlist`,
+            saving
+              ? `Saved ${productName} to your wishlist`
+              : `Removed ${productName} from wishlist`,
           );
         }
         return next;
@@ -43,10 +44,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     [setIds, toast],
   );
 
-  const value = useMemo(
-    () => ({ ids, hydrated, has, toggle }),
-    [ids, hydrated, has, toggle],
-  );
+  const value = useMemo(() => ({ hydrated, has, toggle }), [hydrated, has, toggle]);
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 }

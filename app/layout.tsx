@@ -11,6 +11,8 @@ import { WishlistProvider } from "@/components/providers/WishlistProvider";
 import { ReadyFlag } from "@/components/system/ReadyFlag";
 import { ScrollReveal } from "@/components/system/ScrollReveal";
 import { fontVariables } from "@/lib/fonts";
+import { getCartCatalog, getSettingsOrNull } from "@/lib/queries";
+import { safeQuery } from "@/lib/safe";
 
 import "./globals.css";
 
@@ -38,9 +40,20 @@ export const viewport: Viewport = {
   themeColor: "#F7F1E8",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  /*
+   * The cart stores ids and quantities only, so it needs the catalog to render
+   * a line. Supplying it from the server means a price edited in the admin is
+   * reflected immediately, and a cart saved last week can never show a stale
+   * amount.
+   */
+  const [catalog, settings] = await Promise.all([
+    safeQuery("cart catalog", getCartCatalog, []),
+    safeQuery("settings", getSettingsOrNull, null),
+  ]);
+
   return (
     /*
      * `js` is static rather than script-added, so the pre-animation hidden
@@ -55,7 +68,10 @@ export default function RootLayout({
 
         <ToastProvider>
           <WishlistProvider>
-            <CartProvider>
+            <CartProvider
+              catalog={catalog}
+              currencySymbol={settings?.currencySymbol ?? "Rs."}
+            >
               <ShopFilterProvider>
                 <a className="skip-link" href="#main">
                   Skip to content

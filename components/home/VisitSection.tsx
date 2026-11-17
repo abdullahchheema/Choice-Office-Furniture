@@ -11,19 +11,19 @@ export function VisitSection() {
             Come sit, touch, <em>stay a while</em>
           </h2>
           <p className="lede">
-            Experience the grain and the comfort in person. Our showroom is open
-            daily, and our team is happy to help you plan a room.
+            Sit in the chairs and measure the desks before you commit. Our team
+            will plan a full floor with you, free of charge.
           </p>
 
           <figure className="visit-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/assets/images/showroom.jpg"
-              width={1200}
-              height={795}
+              src="/assets/images/office/showroom.jpg"
+              width={1400}
+              height={753}
               loading="lazy"
               decoding="async"
-              alt="Bright open-plan showroom with a cream lounge chair, oak floors and a long dining counter"
+              alt="Open-plan showroom floor with rows of desks, task chairs and acoustic screens"
             />
           </figure>
 
