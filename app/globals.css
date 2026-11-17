@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* The ported storefront stylesheet.
+   layer(components) is load-bearing: unlayered CSS beats ALL layered CSS, so
+   importing this plainly would make .btn silently defeat every Tailwind utility.
+   In `components` the order becomes theme < base(preflight) < components < utilities,
+   so preflight loses to the storefront and utilities still win over it. */
+@import "./storefront.css" layer(components);
+
+/* ============================================================
+   Brand tokens — the single source of truth.
+   Tailwind v4 emits these as real custom properties, so
+   `bg-oak` and `var(--color-oak)` are the same declaration.
+   ============================================================ */
+@theme {
+  --color-cream: #f7f1e8;
+  --color-linen: #efe6d8;
+  --color-sand: #e3d3bc;
+  --color-oak: #c8a06e;
+  --color-walnut: #7a5233;
+  --color-espresso: #3b2a1e;
+  --color-ink: #2a1f17;
+  --color-clay: #8c4f27; /* accent text — 5.4:1 on cream */
+  --color-text-muted: #6b5848; /* secondary text — 6:1 on cream */
+  --color-line: rgba(59, 42, 30, 0.14);
+  --color-glare: #fbf5ea; /* light-on-dark text over the hero photo */
+  --color-oak-lt: #e7c48f; /* hero eyebrow + h1 em */
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-body: var(--font-plus-jakarta), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 22px;
+
+  --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-brand-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================
+   Legacy aliases — so storefront.css needs no further edits.
+   ============================================================ */
+:root {
+  --cream: var(--color-cream);
+  --linen: var(--color-linen);
+  --sand: var(--color-sand);
+  --oak: var(--color-oak);
+  --walnut: var(--color-walnut);
+  --espresso: var(--color-espresso);
+  --ink: var(--color-ink);
+  --clay: var(--color-clay);
+  --text-muted: var(--color-text-muted);
+  --line: var(--color-line);
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-body: var(--font-plus-jakarta), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --gutter: clamp(18px, 4.5vw, 56px);
+  --section: clamp(72px, 11vw, 144px);
+  --radius-card: 22px;
+
+  --ease: var(--ease-brand);
+  --ease-out: var(--ease-brand-out);
+  --t-fast: 220ms;
+  --t-med: 420ms;
+
+  /* ---- shadcn/ui semantic layer (admin surfaces) ----
+     v4 shadcn consumes raw colour values, not v3's HSL triplets,
+     so the hand-tuned hex goes in unchanged. */
+  --background: var(--color-cream);
+  --foreground: var(--color-espresso);
+  --card: #ffffff;
+  --card-foreground: var(--color-espresso);
+  --popover: #ffffff;
+  --popover-foreground: var(--color-espresso);
+  --primary: var(--color-espresso);
+  --primary-foreground: var(--color-cream);
+  --secondary: var(--color-linen);
+  --secondary-foreground: var(--color-espresso);
+  --muted: var(--color-linen); /* shadcn SURFACE — distinct from --text-muted */
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-sand);
+  --accent-foreground: var(--color-ink);
+  --destructive: #a3301b; /* no red exists in the brand palette */
+  --destructive-foreground: var(--color-cream);
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-clay); /* keeps :focus-visible identical to the storefront */
+  --radius: 0.75rem; /* shadcn's own radius — the storefront uses --radius-card */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
