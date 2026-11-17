@@ -25,23 +25,30 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   const toggle = useCallback(
     (id: string, productName?: string) => {
-      setIds((current) => {
-        const saving = !current.includes(id);
-        const next = saving
-          ? [...current, id]
-          : current.filter((entry) => entry !== id);
+      /*
+       * The toast fires here rather than inside the setIds updater. React may
+       * run an updater during render, and toasting from there updates
+       * ToastProvider mid-render — React warns "Cannot update a component
+       * while rendering a different component", and the toast is unreliable.
+       * Deciding the direction from the current state keeps it in the event
+       * handler, where side effects belong.
+       */
+      const saving = !ids.includes(id);
+      setIds((current) =>
+        current.includes(id)
+          ? current.filter((entry) => entry !== id)
+          : [...current, id],
+      );
 
-        if (productName) {
-          toast(
-            saving
-              ? `Saved ${productName} to your wishlist`
-              : `Removed ${productName} from wishlist`,
-          );
-        }
-        return next;
-      });
+      if (productName) {
+        toast(
+          saving
+            ? `Saved ${productName} to your wishlist`
+            : `Removed ${productName} from wishlist`,
+        );
+      }
     },
-    [setIds, toast],
+    [ids, setIds, toast],
   );
 
   const value = useMemo(() => ({ hydrated, has, toggle }), [hydrated, has, toggle]);

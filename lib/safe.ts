@@ -8,19 +8,43 @@ import "server-only";
  * string that has not been filled in yet. The error is logged once on the
  * server so the cause is visible in the terminal, rather than being swallowed.
  */
+/*
+ * Back-off after a failure.
+ *
+ * Without this, every section of every render retries a database that is known
+ * to be down. Against Supabase with a wrong password that is enough to trip
+ * its own protection — "(ECIRCUITBREAKER) too many authentication failures,
+ * new connections are temporarily blocked" — which then locks out the correct
+ * password too. One attempt per cooldown is enough to notice recovery.
+ */
+const COOLDOWN_MS = 15_000;
+let failingUntil = 0;
+let loggedThisCooldown = false;
+
 export async function safeQuery<T>(
   label: string,
   run: () => Promise<T>,
   fallback: T,
 ): Promise<T> {
+  if (Date.now() < failingUntil) return fallback;
+
   try {
-    return await run();
+    const result = await run();
+    failingUntil = 0;
+    loggedThisCooldown = false;
+    return result;
   } catch (error) {
-    console.error(
-      `[db] ${label} failed — serving fallback. ` +
-        `Check DATABASE_URL/DIRECT_URL in .env.local.\n`,
-      error instanceof Error ? error.message : error,
-    );
+    failingUntil = Date.now() + COOLDOWN_MS;
+    // One line per cooldown, not one per section per render.
+    if (!loggedThisCooldown) {
+      loggedThisCooldown = true;
+      console.error(
+        `[db] ${label} failed — serving fallback, pausing queries for ${
+          COOLDOWN_MS / 1000
+        }s. Check DATABASE_URL/DIRECT_URL in .env.local.\n`,
+        error instanceof Error ? error.message : error,
+      );
+    }
     return fallback;
   }
 }
