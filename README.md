@@ -72,13 +72,24 @@ public/assets/       decorative imagery (hero, craft, showroom)
 prisma/              schema, migrations, seed  (Phase 3)
 ```
 
-### Two token renames worth knowing about
+### Three renames worth knowing about
 
-`storefront.css` is the original stylesheet with its `:root` block removed and exactly two names changed, because both collided with shadcn/ui:
+`storefront.css` is the original stylesheet with its `:root` block removed and three names changed. Each collided with Tailwind or shadcn/ui, and each failed *silently* — nothing errors, the page just renders subtly wrong:
 
-| Original | Now | Why |
+| Original | Now | What went wrong without it |
 |---|---|---|
-| `--muted` | `--text-muted` | The storefront uses it as a *text* colour; shadcn uses `--muted` as a *surface*. Left alone, every piece of secondary copy renders beige-on-beige. |
-| `--radius` | `--radius-card` | Storefront `22px` vs shadcn `0.625rem`. Left alone, every card, tile and the cart drawer silently lose their corner radius. |
+| `--muted` | `--text-muted` | The storefront uses it as a *text* colour; shadcn uses `--muted` as a *surface*. Every piece of secondary copy renders beige-on-beige. |
+| `--radius` | `--radius-card` | Storefront `22px` vs shadcn `0.625rem`. Every card, tile and the cart drawer loses its corner radius. |
+| `.container` | `.shell` | Tailwind v4 ships its own `container` utility, and utilities sort *after* the storefront layer, so it won the page width — 1280px instead of 1240px. |
+
+The third was caught by the fingerprint diff rather than by eye, which is the argument for running it.
 
 `storefront.css` is imported into `layer(components)`. That is deliberate: unlayered CSS beats *all* layered CSS, so importing it plainly would make `.btn` defeat every Tailwind utility. In `components`, Tailwind's preflight loses to the storefront and utilities still win over it.
+
+### Display-font weights
+
+The original loaded Fraunces at weights 700–900 only, so rules asking for 500 or 600 were silently clamped up to 700 by the browser. `next/font` serves the full variable range, where 500 renders a genuinely lighter and narrower face — which re-wrapped the testimonial quotes a line shorter. Seven rules now state `font-weight: 700` explicitly. `next/font` cannot combine `axes` with specific weights, and keeping the `opsz` axis matters more, since it governs the letterforms of every heading.
+
+### Checking fidelity
+
+`scripts/design-fingerprint.js` snapshots computed styles for 37 selectors. Run it in both the legacy site and the Next build and diff the results — it names the broken property instead of leaving you to spot a few pixels.

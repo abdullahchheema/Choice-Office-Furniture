@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
 
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SvgSprite } from "@/components/layout/SvgSprite";
+import { CartProvider } from "@/components/providers/CartProvider";
+import { ShopFilterProvider } from "@/components/providers/ShopFilterProvider";
+import { ToastProvider } from "@/components/providers/ToastProvider";
+import { WishlistProvider } from "@/components/providers/WishlistProvider";
 import { ReadyFlag } from "@/components/system/ReadyFlag";
+import { ScrollReveal } from "@/components/system/ScrollReveal";
 import { fontVariables } from "@/lib/fonts";
 
 import "./globals.css";
@@ -20,6 +29,9 @@ export const metadata: Metadata = {
     siteName: "Choice Office Furniture",
     locale: "en_PK",
   },
+  icons: {
+    icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233B2A1E'/%3E%3Cpath d='M7 16.5 16 8l9 8.5V25H7z' fill='%23C8A06E'/%3E%3Crect x='13' y='17' width='6' height='8' rx='1' fill='%233B2A1E'/%3E%3C/svg%3E",
+  },
 };
 
 export const viewport: Viewport = {
@@ -31,15 +43,32 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     /*
-     * `js` is a static attribute rather than something a script adds, so the
-     * pre-animation hidden states in storefront.css apply from the very first
-     * paint — a script-added class leaves one unstyled frame where the hero
-     * copy flashes at full opacity before hiding.
+     * `js` is static rather than script-added, so the pre-animation hidden
+     * states in storefront.css apply from the first paint. Adding it with a
+     * script leaves one frame where the hero copy flashes at full opacity.
      */
     <html lang="en" className={`js ${fontVariables}`}>
       <body>
         <ReadyFlag />
-        {children}
+        <ScrollReveal />
+        <SvgSprite />
+
+        <ToastProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <ShopFilterProvider>
+                <a className="skip-link" href="#main">
+                  Skip to content
+                </a>
+
+                <SiteHeader />
+                <main id="main">{children}</main>
+                <SiteFooter />
+                <CartDrawer />
+              </ShopFilterProvider>
+            </CartProvider>
+          </WishlistProvider>
+        </ToastProvider>
       </body>
     </html>
   );
