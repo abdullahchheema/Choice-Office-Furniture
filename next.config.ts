@@ -14,7 +14,38 @@ const supabaseHost = (() => {
   }
 })();
 
+/*
+ * Response headers for every route.
+ *
+ * The CSP is deliberately limited to directives that need no script or style
+ * allow-list: frame-ancestors (clickjacking — the admin must never render in
+ * someone else's iframe), base-uri, form-action, object-src. A full
+ * script-src policy needs per-request nonces to coexist with Next's inline
+ * bootstrap scripts, which is worth doing but is not a safe one-line change.
+ */
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+  },
+  // Only honoured over HTTPS, so harmless on localhost.
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+];
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
+
   /**
    * Next 16's create-next-app turns Cache Components on by default. It is
    * deliberately off here: it makes every dynamic read (cookies/headers/

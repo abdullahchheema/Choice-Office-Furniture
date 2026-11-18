@@ -88,6 +88,17 @@ export function CartProvider({
     [lines, byId],
   );
 
+  /*
+   * What checkout submits: the lines the customer can SEE. A stored line whose
+   * product has since been unpublished or deleted is not rendered, so it must
+   * not be sent either — otherwise the server rejects the order for an item the
+   * customer cannot see and therefore cannot remove.
+   */
+  const visibleLines = useMemo(
+    () => items.map((item) => ({ id: item.product.id, qty: item.qty })),
+    [items],
+  );
+
   const count = useMemo(() => items.reduce((n, i) => n + i.qty, 0), [items]);
 
   /* Display only. The real total is computed server-side on Decimal from
@@ -163,7 +174,7 @@ export function CartProvider({
   const value = useMemo(
     () => ({
       items,
-      lines,
+      lines: visibleLines,
       count,
       subtotalLabel,
       subtotalValue,
@@ -180,7 +191,7 @@ export function CartProvider({
     }),
     [
       items,
-      lines,
+      visibleLines,
       count,
       subtotalLabel,
       subtotalValue,
