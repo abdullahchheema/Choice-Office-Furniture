@@ -77,24 +77,24 @@ export async function changeOrderStatus({
 
       if (needsDecrement || needsRestore) {
         const items = await tx.orderItem.findMany({
-          where: { orderId, productId: { not: null } },
-          select: { productId: true, quantity: true },
+          where: { orderId, variantId: { not: null } },
+          select: { variantId: true, quantity: true },
         });
 
         /*
          * Sorted ids give every transaction the same lock order. Without it,
-         * two concurrent multi-product orders can take locks in opposite
+         * two concurrent multi-item orders can take variant locks in opposite
          * orders and deadlock.
          */
         const sorted = [...items].sort((a, b) =>
-          (a.productId ?? "").localeCompare(b.productId ?? ""),
+          (a.variantId ?? "").localeCompare(b.variantId ?? ""),
         );
 
         for (const item of sorted) {
-          if (!item.productId) continue;
+          if (!item.variantId) continue;
           await adjustStock({
             tx,
-            productId: item.productId,
+            variantId: item.variantId,
             delta: needsDecrement ? -item.quantity : item.quantity,
             reason: needsDecrement ? "ORDER_CONFIRMED" : "ORDER_CANCELLED",
             orderId,

@@ -29,9 +29,6 @@ export type ProductFormValues = {
   toneHex: string;
   imageObjectPosition: string;
   imageLift: boolean;
-  material: string;
-  dimensions: string;
-  warrantyMonths: string;
   metaTitle: string;
   metaDescription: string;
 };
@@ -42,18 +39,33 @@ export function ProductForm({
   categories,
   currencySymbol,
   submitLabel,
+  type,
+  isNew = false,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   values: ProductFormValues;
   categories: { id: string; name: string }[];
   currencySymbol: string;
   submitLabel: string;
+  /** Fixed at creation. Variable products price and stock per variant. */
+  type: "SIMPLE" | "VARIABLE";
+  isNew?: boolean;
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(action, {});
   const err = (field: string) => state.fieldErrors?.[field];
 
   return (
     <form action={formAction} className="space-y-8">
+      <input type="hidden" name="type" value={type} />
+
+      {state.saved ? (
+        <p
+          role="status"
+          className="rounded-md border border-oak bg-sand/40 px-4 py-3 text-sm font-semibold text-espresso"
+        >
+          Saved.
+        </p>
+      ) : null}
       {state.error ? (
         <p
           role="alert"
@@ -76,7 +88,15 @@ export function ProductForm({
           <input name="slug" defaultValue={values.slug} className={FIELD} />
         </Field>
 
-        <Field label="SKU" error={err("sku")}>
+        <Field
+          label={type === "VARIABLE" ? "Base SKU" : "SKU"}
+          hint={
+            type === "VARIABLE"
+              ? "Variant SKUs are built from this, e.g. CH-EXE-001-BLK-LEA"
+              : undefined
+          }
+          error={err("sku")}
+        >
           <input name="sku" defaultValue={values.sku} required className={FIELD} />
         </Field>
 
@@ -99,7 +119,10 @@ export function ProductForm({
         <Field label="Status" error={err("status")}>
           <select name="status" defaultValue={values.status} className={FIELD}>
             <option value="DRAFT">Draft — hidden from the shop</option>
-            <option value="PUBLISHED">Published — live</option>
+            {/* A new variable product has no variants to sell yet. */}
+            {isNew && type === "VARIABLE" ? null : (
+              <option value="PUBLISHED">Published — live</option>
+            )}
             <option value="ARCHIVED">Archived — retired</option>
           </select>
         </Field>
@@ -127,59 +150,75 @@ export function ProductForm({
         </Field>
       </Section>
 
-      <Section title="Pricing and stock">
-        <Field label={`Price (${currencySymbol})`} error={err("price")}>
-          <input
-            name="price"
-            defaultValue={values.price}
-            inputMode="decimal"
-            required
-            className={FIELD}
-          />
-        </Field>
+      {type === "SIMPLE" ? (
+        <Section title="Pricing and stock">
+          <Field label={`Price (${currencySymbol})`} error={err("price")}>
+            <input
+              name="price"
+              defaultValue={values.price}
+              inputMode="decimal"
+              required
+              className={FIELD}
+            />
+          </Field>
 
-        <Field
-          label={`Compare-at (${currencySymbol})`}
-          hint="Optional — shown struck through"
-          error={err("compareAtPrice")}
-        >
-          <input
-            name="compareAtPrice"
-            defaultValue={values.compareAtPrice}
-            inputMode="decimal"
-            className={FIELD}
-          />
-        </Field>
+          <Field
+            label={`Compare-at (${currencySymbol})`}
+            hint="Optional — shown struck through, and the discount badge is worked out from it"
+            error={err("compareAtPrice")}
+          >
+            <input
+              name="compareAtPrice"
+              defaultValue={values.compareAtPrice}
+              inputMode="decimal"
+              className={FIELD}
+            />
+          </Field>
 
-        <Field
-          label="Stock quantity"
-          hint="A change here is recorded as a ledger adjustment"
-          error={err("stockQuantity")}
-        >
-          <input
-            name="stockQuantity"
-            type="number"
-            min={0}
-            defaultValue={values.stockQuantity}
-            className={FIELD}
-          />
-        </Field>
+          <Field
+            label="Stock quantity"
+            hint="A change here is recorded as a ledger adjustment"
+            error={err("stockQuantity")}
+          >
+            <input
+              name="stockQuantity"
+              type="number"
+              min={0}
+              defaultValue={values.stockQuantity}
+              className={FIELD}
+            />
+          </Field>
 
-        <Field label="Low-stock threshold" error={err("lowStockThreshold")}>
-          <input
-            name="lowStockThreshold"
-            type="number"
-            min={0}
-            defaultValue={values.lowStockThreshold}
-            className={FIELD}
-          />
-        </Field>
+          <Field label="Low-stock threshold" error={err("lowStockThreshold")}>
+            <input
+              name="lowStockThreshold"
+              type="number"
+              min={0}
+              defaultValue={values.lowStockThreshold}
+              className={FIELD}
+            />
+          </Field>
 
-        <Toggle name="trackInventory" label="Track inventory" defaultChecked={values.trackInventory} />
+          <Toggle name="trackInventory" label="Track inventory" defaultChecked={values.trackInventory} />
+        </Section>
+      ) : (
+        <Section title="Pricing and stock">
+          <p className="text-sm text-text-muted sm:col-span-2">
+            This is a variable product: price, compare-at price, SKU and stock are set
+            on each variant, so a black chair and a grey chair can differ in all four.
+            {isNew ? " Add the options and generate variants on the next screen." : ""}
+          </p>
+        </Section>
+      )}
+
+      <Section title="Merchandising">
         <Toggle name="isFeatured" label="Featured on the homepage" defaultChecked={values.isFeatured} />
         <Toggle name="isBestseller" label="Mark as bestseller" defaultChecked={values.isBestseller} />
-
-        <Field label="Badge" hint='e.g. "New", "Low stock"' error={err("badge")}>
+        <Field
+          label="Badge"
+          hint='Optional manual badge, e.g. "New". The sale % and "Low stock" appear automatically.'
+          error={err("badge")}
+        >
           <input name="badge" defaultValue={values.badge} className={FIELD} />
         </Field>
       </Section>
@@ -219,24 +258,6 @@ export function ProductForm({
           label="Brighten and zoom (for dark photos)"
           defaultChecked={values.imageLift}
         />
-      </Section>
-
-      <Section title="Specifications">
-        <Field label="Material" error={err("material")}>
-          <input name="material" defaultValue={values.material} className={FIELD} />
-        </Field>
-        <Field label="Dimensions" error={err("dimensions")}>
-          <input name="dimensions" defaultValue={values.dimensions} className={FIELD} />
-        </Field>
-        <Field label="Warranty (months)" error={err("warrantyMonths")}>
-          <input
-            name="warrantyMonths"
-            type="number"
-            min={0}
-            defaultValue={values.warrantyMonths}
-            className={FIELD}
-          />
-        </Field>
       </Section>
 
       <Section title="Search listing">

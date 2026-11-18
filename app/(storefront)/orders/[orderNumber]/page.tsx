@@ -133,6 +133,14 @@ export default async function OrderPage({
               >
                 <span>
                   <strong style={{ fontWeight: 700 }}>{item.productName}</strong>
+                  {item.variantLabel ? (
+                    <>
+                      <br />
+                      <span className="line-meta" style={{ fontWeight: 700 }}>
+                        {item.variantLabel}
+                      </span>
+                    </>
+                  ) : null}
                   <br />
                   <span className="line-meta">
                     {item.quantity} ×{" "}

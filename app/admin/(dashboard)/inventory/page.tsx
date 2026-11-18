@@ -5,25 +5,64 @@ import { findStockDrift } from "@/lib/services/inventory";
 export const metadata = { title: "Inventory" };
 
 export default async function AdminInventoryPage() {
-  const [products, drift, recent] = await Promise.all([
-    prisma.product.findMany({
-      where: { trackInventory: true, status: { not: "ARCHIVED" } },
-      orderBy: [{ stockQuantity: "asc" }, { name: "asc" }],
+  const [rows, drift, recent] = await Promise.all([
+    // Stock is per VARIANT: one row per sellable SKU, not per product.
+    prisma.productVariant.findMany({
+      where: {
+        trackInventory: true,
+        isActive: true,
+        product: { status: { not: "ARCHIVED" } },
+      },
+      orderBy: [{ stockQuantity: "asc" }, { sku: "asc" }],
       select: {
         id: true,
-        name: true,
         sku: true,
         stockQuantity: true,
         lowStockThreshold: true,
+        product: { select: { name: true, type: true } },
+        options: {
+          select: {
+            attribute: { select: { sortOrder: true } },
+            value: { select: { value: true } },
+          },
+        },
       },
     }),
     findStockDrift(),
     prisma.inventoryTransaction.findMany({
       orderBy: { createdAt: "desc" },
       take: 15,
-      include: { product: { select: { name: true, sku: true } } },
+      include: {
+        variant: {
+          select: {
+            sku: true,
+            product: { select: { name: true } },
+            options: {
+              select: {
+                attribute: { select: { sortOrder: true } },
+                value: { select: { value: true } },
+              },
+            },
+          },
+        },
+      },
     }),
   ]);
+
+  const labelOf = (options: { attribute: { sortOrder: number }; value: { value: string } }[]) =>
+    [...options]
+      .sort((a, b) => a.attribute.sortOrder - b.attribute.sortOrder)
+      .map((o) => o.value.value)
+      .join(" / ");
+
+  const products = rows.map((row) => ({
+    id: row.id,
+    name: row.product.name,
+    variant: labelOf(row.options),
+    sku: row.sku,
+    stockQuantity: row.stockQuantity,
+    lowStockThreshold: row.lowStockThreshold,
+  }));
 
   return (
     <div className="space-y-6">
@@ -32,9 +71,10 @@ export default async function AdminInventoryPage() {
           Inventory
         </h1>
         <p className="mt-1 max-w-prose text-sm text-text-muted">
-          Stock moves when an order is confirmed, not when it is placed — a
-          WhatsApp handoff carries no commitment. Every change is written to the
-          ledger below.
+          Stock is tracked per variant — each colour, size or configuration sells
+          out on its own. It moves when an order is confirmed, not when it is
+          placed, because a WhatsApp handoff carries no commitment. Every change
+          is written to the ledger below.
         </p>
       </header>
 
@@ -52,7 +92,7 @@ export default async function AdminInventoryPage() {
         </h2>
         {drift.length === 0 ? (
           <p className="mt-2 text-sm font-semibold text-espresso">
-            Balanced — every product’s stock equals the sum of its recorded
+            Balanced — every variant’s stock equals the sum of its recorded
             movements.
           </p>
         ) : (
@@ -75,7 +115,7 @@ export default async function AdminInventoryPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-line bg-cream text-xs uppercase tracking-[0.1em] text-text-muted">
               <tr>
-                <th scope="col" className="px-6 py-3 font-bold">Product</th>
+                <th scope="col" className="px-6 py-3 font-bold">Product / variant</th>
                 <th scope="col" className="px-6 py-3 text-right font-bold">In stock</th>
                 <th scope="col" className="px-6 py-3 font-bold">Adjust</th>
               </tr>
@@ -89,6 +129,9 @@ export default async function AdminInventoryPage() {
                     <td className="px-6 py-3">
                       <span className="block font-semibold text-espresso">
                         {product.name}
+                        {product.variant ? (
+                          <span className="font-medium text-text-muted"> — {product.variant}</span>
+                        ) : null}
                       </span>
                       <span className="font-mono text-xs text-text-muted">
                         {product.sku}
@@ -111,7 +154,7 @@ export default async function AdminInventoryPage() {
                       ) : null}
                     </td>
                     <td className="px-6 py-3">
-                      <StockAdjuster productId={product.id} />
+                      <StockAdjuster variantId={product.id} />
                     </td>
                   </tr>
                 );
@@ -138,8 +181,10 @@ export default async function AdminInventoryPage() {
               </span>
               <span className="min-w-0 flex-1 truncate">
                 <span className="font-semibold text-espresso">
-                  {entry.product.name}
+                  {entry.variant.product.name}
+                  {labelOf(entry.variant.options) ? ` — ${labelOf(entry.variant.options)}` : ""}
                 </span>
+                <span className="font-mono text-xs text-text-muted"> {entry.variant.sku}</span>
                 <span className="text-text-muted">
                   {" "}
                   · {entry.reason.toLowerCase().replace(/_/g, " ")}

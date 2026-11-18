@@ -11,6 +11,7 @@ import { normalisePhonePK } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/queries";
 import { RateLimitError, clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { variantLabel } from "@/lib/variants";
 import { renderOrderMessage, type WhatsappOrderLine } from "@/lib/whatsapp";
 
 /**
@@ -128,7 +129,19 @@ export async function submitCheckout(
     });
   }
 
-  const input = parsed.data;
+  /*
+   * The same variant can arrive twice (two tabs, an edited payload). Merged
+   * into one line before anything is priced, so the stock check below sees the
+   * total being asked for rather than each half separately passing.
+   */
+  const merged = new Map<string, number>();
+  for (const item of parsed.data.items) {
+    merged.set(item.id, Math.min(99, (merged.get(item.id) ?? 0) + item.qty));
+  }
+  const input = {
+    ...parsed.data,
+    items: [...merged].map(([id, qty]) => ({ id, qty })),
+  };
 
   const phoneE164 = normalisePhonePK(input.phone);
   if (!phoneE164) {
@@ -190,29 +203,53 @@ export async function submitCheckout(
 
   const settings = await getSettings();
 
-  const ids = [...new Set(input.items.map((item) => item.id))];
-  const products = await prisma.product.findMany({
-    where: { id: { in: ids }, status: "PUBLISHED" },
+  /*
+   * A cart line is a VARIANT. Everything priced or described below is read from
+   * the variant's own row — price, compare-at, SKU, stock, options, photo —
+   * so a chair in Black/Leather is charged and recorded as exactly that, and
+   * the client has no field in which to claim otherwise.
+   */
+  const ids = input.items.map((item) => item.id);
+  const variants = await prisma.productVariant.findMany({
+    where: { id: { in: ids }, isActive: true, product: { status: "PUBLISHED" } },
     select: {
       id: true,
-      name: true,
       sku: true,
-      slug: true,
       price: true,
+      compareAtPrice: true,
       stockQuantity: true,
       trackInventory: true,
-      category: { select: { name: true } },
       images: {
-        where: { isPrimary: true },
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
         select: { storagePath: true },
         take: 1,
+      },
+      options: {
+        select: {
+          attribute: { select: { name: true, sortOrder: true } },
+          value: { select: { value: true } },
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          category: { select: { name: true } },
+          images: {
+            where: { variantId: null },
+            orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+            select: { storagePath: true },
+            take: 1,
+          },
+        },
       },
     },
   });
 
-  const byId = new Map(products.map((product) => [product.id, product]));
+  const byId = new Map(variants.map((variant) => [variant.id, variant]));
 
-  // A product unpublished or deleted between loading the cart and submitting
+  // A variant deactivated or deleted between loading the cart and submitting
   // it is a real, ordinary case — say which one, rather than failing opaquely.
   const missing = input.items.filter((item) => !byId.has(item.id));
   if (missing.length > 0) {
@@ -230,20 +267,29 @@ export async function submitCheckout(
 
   const shortfalls: string[] = [];
   const lines = input.items.map((item) => {
-    const product = byId.get(item.id)!;
+    const variant = byId.get(item.id)!;
 
-    if (product.trackInventory && product.stockQuantity < item.qty) {
+    const optionPairs = [...variant.options]
+      .sort((a, b) => a.attribute.sortOrder - b.attribute.sortOrder)
+      .map((option) => ({ name: option.attribute.name, value: option.value.value }));
+    const label = variantLabel(optionPairs);
+    const display = label ? `${variant.product.name} (${label})` : variant.product.name;
+
+    if (variant.trackInventory && variant.stockQuantity < item.qty) {
       shortfalls.push(
-        product.stockQuantity === 0
-          ? `${product.name} is out of stock`
-          : `only ${product.stockQuantity} × ${product.name} left`,
+        variant.stockQuantity === 0
+          ? `${display} is out of stock`
+          : `only ${variant.stockQuantity} × ${display} left`,
       );
     }
 
     // The price comes from this row, never from the request.
-    const unitPrice = toDecimal(product.price);
+    const unitPrice = toDecimal(variant.price);
     return {
-      product,
+      variant,
+      product: variant.product,
+      label,
+      optionPairs,
       quantity: item.qty,
       unitPrice,
       lineTotal: multiplyMoney(unitPrice, item.qty),
@@ -310,7 +356,8 @@ export async function submitCheckout(
 
       const messageLines: WhatsappOrderLine[] = lines.map((line) => ({
         productName: line.product.name,
-        productSku: line.product.sku,
+        variantLabel: line.label || null,
+        productSku: line.variant.sku,
         quantity: line.quantity,
         unitPrice: toMoneyString(line.unitPrice),
         lineTotal: toMoneyString(line.lineTotal),
@@ -367,14 +414,23 @@ export async function submitCheckout(
           items: {
             create: lines.map((line) => ({
               productId: line.product.id,
+              variantId: line.variant.id,
+              // ---- the snapshot: frozen at the moment of purchase ----
               productName: line.product.name,
-              productSku: line.product.sku,
+              productSku: line.variant.sku,
               productSlug: line.product.slug,
               categoryName: line.product.category.name,
+              variantLabel: line.label || null,
+              variantOptions: line.optionPairs.length > 0 ? line.optionPairs : undefined,
               unitPrice: line.unitPrice,
+              compareAtPrice: line.variant.compareAtPrice,
               quantity: line.quantity,
               lineTotal: line.lineTotal,
-              imagePath: line.product.images[0]?.storagePath ?? null,
+              // The variant's own photo if it has one, else the product's.
+              imagePath:
+                line.variant.images[0]?.storagePath ??
+                line.product.images[0]?.storagePath ??
+                null,
             })),
           },
 

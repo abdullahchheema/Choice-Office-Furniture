@@ -10,7 +10,7 @@
  */
 import { hash } from "@node-rs/argon2";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, type InventoryReason } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
 
 loadEnv({ path: ".env.local" });
@@ -215,6 +215,188 @@ const PRODUCTS: SeedProduct[] = [
   },
 ];
 
+// ─────────────────────── specification templates ───────────────────────
+//
+// The labels each kind of product usually needs. They are suggestions in the
+// admin's specification builder, not a schema: a chair and a desk do not share
+// a vocabulary, and any product can still list anything it likes.
+
+type Tpl = { group?: string; name: string };
+const CHAIR_TPL: Tpl[] = [
+  { group: "Comfort", name: "Seat height" },
+  { group: "Comfort", name: "Seat dimensions" },
+  { group: "Comfort", name: "Backrest height" },
+  { group: "Comfort", name: "Tilt mechanism" },
+  { group: "Comfort", name: "Armrests" },
+  { group: "Construction", name: "Upholstery" },
+  { group: "Construction", name: "Base and castors" },
+  { group: "Construction", name: "Maximum load" },
+];
+const TABLE_TPL: Tpl[] = [
+  { group: "Size", name: "Top thickness" },
+  { group: "Size", name: "Height range" },
+  { group: "Size", name: "Seats" },
+  { group: "Construction", name: "Top material" },
+  { group: "Construction", name: "Frame" },
+  { group: "Construction", name: "Maximum load" },
+  { group: "Construction", name: "Cable management" },
+];
+const STORAGE_TPL: Tpl[] = [
+  { group: "Size", name: "Shelves" },
+  { group: "Size", name: "Drawers" },
+  { group: "Construction", name: "Locking" },
+  { group: "Construction", name: "Maximum load per shelf" },
+  { group: "Construction", name: "Finish" },
+];
+const ACCESSORY_TPL: Tpl[] = [
+  { group: "Fit", name: "Compatibility" },
+  { group: "Fit", name: "Clamp range" },
+  { group: "Details", name: "Finish" },
+  { group: "Details", name: "Power or connectivity" },
+];
+
+const SPEC_TEMPLATES: Record<string, Tpl[]> = {
+  "executive-chairs": CHAIR_TPL,
+  "ergonomic-chairs": CHAIR_TPL,
+  "mesh-chairs": CHAIR_TPL,
+  "manager-chairs": CHAIR_TPL,
+  "visitor-chairs": CHAIR_TPL,
+  "gaming-chairs": CHAIR_TPL,
+  "office-desks": TABLE_TPL,
+  "office-tables": TABLE_TPL,
+  "conference-tables": TABLE_TPL,
+  "office-storage": STORAGE_TPL,
+  "office-accessories": ACCESSORY_TPL,
+};
+
+// ───────────────────────── variable demo products ─────────────────────────
+
+type SeedSpec = { group?: string; name: string; value: string };
+type SeedPhoto = { path: string; width: number; height: number; alt: string; position?: string };
+
+type VariableSeed = {
+  slug: string;
+  sku: string;
+  name: string;
+  category: string;
+  shortDescription: string;
+  description: string;
+  tone: string;
+  objectPosition: string;
+  featured?: boolean;
+  badge?: string;
+  sharedPhoto: SeedPhoto;
+  attributes: {
+    name: string;
+    display: "BUTTONS" | "SWATCHES";
+    values: { value: string; swatchHex?: string }[];
+  }[];
+  variants: {
+    /** One value per attribute, in attribute order. */
+    options: string[];
+    sku: string;
+    price: number;
+    compareAtPrice?: number;
+    stock: number;
+    photos?: SeedPhoto[];
+    specs?: SeedSpec[];
+  }[];
+  specs: SeedSpec[];
+};
+
+const VARIABLE_PRODUCTS: VariableSeed[] = [
+  {
+    slug: "halden-executive-chair", sku: "CH-HLD-001", name: "Halden Executive Chair",
+    category: "executive-chairs", featured: true, badge: "New", tone: "#E8D9C3", objectPosition: "35% 45%",
+    shortDescription: "Leather executive seating in three colours, with fixed or 4D arms.",
+    description:
+      "The Halden pairs a moulded foam shell with soft-touch leather. Choose the colour that suits the room and the arms that suit the person: fixed loop arms for meeting rooms, fully adjustable 4D arms for the chair someone sits in all day.",
+    sharedPhoto: { path: `${IMG}/chair-executive.jpg`, width: 1400, height: 1750, alt: "Halden executive chair in tan leather beside a maple desk", position: "35% 45%" },
+    attributes: [
+      { name: "Colour", display: "SWATCHES", values: [
+        { value: "Tan", swatchHex: "#A8754A" }, { value: "Grey", swatchHex: "#8A8C8F" }, { value: "Black", swatchHex: "#1F1B18" },
+      ] },
+      { name: "Arms", display: "BUTTONS", values: [{ value: "Fixed arms" }, { value: "4D adjustable arms" }] },
+    ],
+    variants: [
+      { options: ["Tan", "Fixed arms"], sku: "CH-HLD-001-TAN-FIX", price: 46000, compareAtPrice: 54000, stock: 12,
+        photos: [{ path: `${IMG}/chair-executive.jpg`, width: 1400, height: 1750, alt: "Halden executive chair in tan leather with fixed arms", position: "35% 45%" }],
+        specs: [{ group: "Comfort", name: "Armrests", value: "Fixed loop arms, padded" }] },
+      { options: ["Tan", "4D adjustable arms"], sku: "CH-HLD-001-TAN-4D", price: 52000, compareAtPrice: 60000, stock: 6,
+        photos: [{ path: `${IMG}/chair-executive.jpg`, width: 1400, height: 1750, alt: "Halden executive chair in tan leather with 4D arms", position: "35% 45%" }],
+        specs: [{ group: "Comfort", name: "Armrests", value: "4D — height, width, depth and pivot" }] },
+      { options: ["Grey", "Fixed arms"], sku: "CH-HLD-001-GRY-FIX", price: 46000, stock: 8,
+        photos: [{ path: `${IMG}/chair-manager.jpg`, width: 1400, height: 1867, alt: "Halden executive chair in grey leather at a white desk", position: "22% 55%" }],
+        specs: [{ group: "Comfort", name: "Armrests", value: "Fixed loop arms, padded" }] },
+      // Deliberately no Grey + 4D arms: the product page must cope with a
+      // combination that is simply not offered.
+      { options: ["Black", "Fixed arms"], sku: "CH-HLD-001-BLK-FIX", price: 44000, stock: 15,
+        specs: [{ group: "Comfort", name: "Armrests", value: "Fixed loop arms, padded" }] },
+      // Sold out, to show the struck-through state.
+      { options: ["Black", "4D adjustable arms"], sku: "CH-HLD-001-BLK-4D", price: 50000, stock: 0,
+        specs: [{ group: "Comfort", name: "Armrests", value: "4D — height, width, depth and pivot" }] },
+    ],
+    specs: [
+      { group: "Comfort", name: "Tilt mechanism", value: "Synchro-tilt, 4 locking positions" },
+      { group: "Comfort", name: "Seat height", value: "46–56 cm" },
+      { group: "Construction", name: "Upholstery", value: "Full-grain leather" },
+      { group: "Construction", name: "Base and castors", value: "Polished aluminium, hard-floor castors" },
+      { group: "Construction", name: "Maximum load", value: "150 kg" },
+      { name: "Warranty", value: "5 years" },
+      { name: "Assembly", value: "Required — we assemble on delivery" },
+    ],
+  },
+  {
+    slug: "forma-office-desk", sku: "DK-FRM-001", name: "Forma Office Desk",
+    category: "office-desks", featured: true, tone: "#EBDDC8", objectPosition: "50% 55%",
+    shortDescription: "A fixed-height desk in walnut or maple, in three widths.",
+    description:
+      "A straightforward desk done well: a 25 mm top in walnut or maple veneer on a powder-coated steel frame, with a rear cable tray. Pick the finish and the width that fits the room — every size is priced and stocked separately.",
+    sharedPhoto: { path: `${IMG}/desk-maple.jpg`, width: 1400, height: 2100, alt: "Forma office desk in maple seen from above", position: "60% 25%" },
+    attributes: [
+      { name: "Top finish", display: "BUTTONS", values: [{ value: "Walnut" }, { value: "Maple" }] },
+      { name: "Width", display: "BUTTONS", values: [{ value: "140 cm" }, { value: "160 cm" }, { value: "180 cm" }] },
+    ],
+    variants: (["Walnut", "Maple"] as const).flatMap((finish) =>
+      ([
+        { width: "140 cm", base: 48000, weight: "38 kg", stock: finish === "Walnut" ? 9 : 14 },
+        { width: "160 cm", base: 54000, weight: "44 kg", stock: finish === "Walnut" ? 5 : 2 },
+        { width: "180 cm", base: 61000, weight: "51 kg", stock: finish === "Walnut" ? 0 : 7 },
+      ] as const).map(({ width, base, weight, stock }) => {
+        const cm = width.replace(" cm", "");
+        const walnut = finish === "Walnut";
+        return {
+          options: [finish, width],
+          sku: `DK-FRM-001-${walnut ? "WAL" : "MAP"}-${cm}`,
+          // Walnut carries a small premium; one size shows a sale price.
+          price: base + (walnut ? 4000 : 0),
+          compareAtPrice: walnut && cm === "160" ? 66000 : undefined,
+          stock,
+          // The same finish photo is shared by every width of that finish.
+          photos: [
+            walnut
+              ? { path: `${IMG}/desk-standing.jpg`, width: 1400, height: 2100, alt: `Forma desk, ${width}, walnut finish`, position: "50% 55%" }
+              : { path: `${IMG}/desk-maple.jpg`, width: 1400, height: 2100, alt: `Forma desk, ${width}, maple finish`, position: "60% 25%" },
+          ],
+          specs: [
+            { group: "Size", name: "Dimensions", value: `W ${cm} × D 70 × H 74 cm` },
+            { group: "Size", name: "Weight", value: weight },
+          ],
+        };
+      }),
+    ),
+    specs: [
+      { group: "Size", name: "Top thickness", value: "25 mm" },
+      { group: "Construction", name: "Top material", value: "Walnut or maple veneer on MDF" },
+      { group: "Construction", name: "Frame", value: "Powder-coated steel, black" },
+      { group: "Construction", name: "Maximum load", value: "80 kg" },
+      { group: "Construction", name: "Cable management", value: "Rear cable tray and grommet" },
+      { name: "Warranty", value: "5 years" },
+      { name: "Assembly", value: "Required — we assemble on delivery" },
+    ],
+  },
+];
+
 // ────────────────────────── homepage content ──────────────────────────
 
 const HOMEPAGE_SECTIONS = [
@@ -316,95 +498,232 @@ async function main() {
   }
   console.log(`  ✓ ${CATEGORIES.length} categories`);
 
-  // --- products ---
+  // --- specification templates ---
+  for (const [slug, templates] of Object.entries(SPEC_TEMPLATES)) {
+    const category = await prisma.category.findUniqueOrThrow({ where: { slug } });
+    // Seeded once; after that the admin owns the template.
+    if ((await prisma.categorySpecTemplate.count({ where: { categoryId: category.id } })) === 0) {
+      await prisma.categorySpecTemplate.createMany({
+        data: templates.map((t, i) => ({
+          categoryId: category.id, groupName: t.group ?? null, name: t.name, sortOrder: i,
+        })),
+      });
+    }
+  }
+  console.log(`  ✓ specification templates for ${Object.keys(SPEC_TEMPLATES).length} categories`);
+
+  // --- simple products: a product with one default variant ---
   for (const [index, product] of PRODUCTS.entries()) {
     const category = await prisma.category.findUniqueOrThrow({
       where: { slug: product.category },
     });
 
+    const shared = {
+      name: product.name,
+      shortDescription: product.shortDescription,
+      description: product.description,
+      status: "PUBLISHED" as const,
+      isFeatured: product.featured ?? false,
+      isBestseller: product.bestseller ?? false,
+      badge: product.badge ?? null,
+      toneHex: product.tone,
+      imageObjectPosition: product.objectPosition,
+      categoryId: category.id,
+      sortOrder: index,
+    };
+
     const saved = await prisma.product.upsert({
       where: { slug: product.slug },
-      update: {
-        name: product.name,
-        price: product.price,
-        compareAtPrice: product.compareAtPrice ?? null,
-        shortDescription: product.shortDescription,
-        description: product.description,
-        status: "PUBLISHED",
-        isFeatured: product.featured ?? false,
-        isBestseller: product.bestseller ?? false,
-        badge: product.badge ?? null,
-        toneHex: product.tone,
-        imageObjectPosition: product.objectPosition,
-        categoryId: category.id,
-        sortOrder: index,
-        material: product.material ?? null,
-        dimensions: product.dimensions ?? null,
-        warrantyMonths: product.warrantyMonths ?? null,
-      },
+      update: shared,
       create: {
         slug: product.slug,
         sku: product.sku,
-        name: product.name,
-        price: product.price,
-        compareAtPrice: product.compareAtPrice ?? null,
+        type: "SIMPLE",
+        minPrice: product.price,
         currency: "PKR",
-        shortDescription: product.shortDescription,
-        description: product.description,
-        stockQuantity: product.stock,
-        status: "PUBLISHED",
         publishedAt: new Date(),
-        isFeatured: product.featured ?? false,
-        isBestseller: product.bestseller ?? false,
-        badge: product.badge ?? null,
-        toneHex: product.tone,
-        imageObjectPosition: product.objectPosition,
-        categoryId: category.id,
-        sortOrder: index,
-        material: product.material ?? null,
-        dimensions: product.dimensions ?? null,
-        warrantyMonths: product.warrantyMonths ?? null,
-      },
-    });
-
-    await prisma.productImage.upsert({
-      where: { productId_storagePath: { productId: saved.id, storagePath: product.image } },
-      update: { altText: product.alt, width: product.width, height: product.height, objectPosition: product.objectPosition },
-      create: {
-        productId: saved.id,
-        storagePath: product.image,
-        altText: product.alt,
-        width: product.width,
-        height: product.height,
-        mimeType: "image/jpeg",
-        objectPosition: product.objectPosition,
-        isPrimary: true,
-        sortOrder: 0,
+        ...shared,
       },
     });
 
     /*
-     * Opening stock goes through the ledger rather than straight onto the
-     * column, so `stockQuantity` and the sum of its transactions agree from
-     * the very first row — which is what makes the reconciliation query in
-     * the admin meaningful.
+     * Price and stock live on the variant, and are only written when the
+     * variant is first created — re-seeding must not undo prices or stock an
+     * administrator has since changed.
      */
-    const existingLedger = await prisma.inventoryTransaction.count({
-      where: { productId: saved.id, reason: "INITIAL_STOCK" as InventoryReason },
+    const hasVariant = await prisma.productVariant.findFirst({
+      where: { productId: saved.id },
+      select: { id: true },
     });
-    if (existingLedger === 0) {
-      await prisma.inventoryTransaction.create({
+    if (!hasVariant) {
+      await prisma.$transaction(async (tx) => {
+        const variant = await tx.productVariant.create({
+          data: {
+            productId: saved.id,
+            sku: product.sku,
+            price: product.price,
+            compareAtPrice: product.compareAtPrice ?? null,
+            stockQuantity: product.stock,
+            isDefault: true,
+          },
+        });
+        // Opening stock goes through the ledger, so the column and the sum of
+        // its transactions agree from the very first row.
+        await tx.inventoryTransaction.create({
+          data: {
+            variantId: variant.id,
+            quantityDelta: product.stock,
+            reason: "INITIAL_STOCK",
+            resultingQuantity: product.stock,
+            note: "Opening stock from seed",
+          },
+        });
+      });
+    }
+
+    if (!(await prisma.productImage.findFirst({
+      where: { productId: saved.id, variantId: null, storagePath: product.image },
+    }))) {
+      await prisma.productImage.create({
         data: {
           productId: saved.id,
-          quantityDelta: product.stock,
-          reason: "INITIAL_STOCK",
-          resultingQuantity: product.stock,
-          note: "Opening stock from seed",
+          storagePath: product.image,
+          altText: product.alt,
+          width: product.width,
+          height: product.height,
+          mimeType: "image/jpeg",
+          objectPosition: product.objectPosition,
+          isPrimary: true,
+          sortOrder: 0,
         },
       });
     }
+
+    // The old fixed columns are now ordinary, editable specification rows.
+    if ((await prisma.productSpecification.count({ where: { productId: saved.id } })) === 0) {
+      const rows: SeedSpec[] = [
+        ...(product.material ? [{ name: "Material", value: product.material }] : []),
+        ...(product.dimensions ? [{ name: "Dimensions", value: product.dimensions }] : []),
+        ...(product.warrantyMonths
+          ? [{ name: "Warranty", value: product.warrantyMonths % 12 === 0
+              ? `${product.warrantyMonths / 12} year${product.warrantyMonths === 12 ? "" : "s"}`
+              : `${product.warrantyMonths} months` }]
+          : []),
+        { name: "Assembly", value: "Required — we assemble on delivery" },
+      ];
+      await prisma.productSpecification.createMany({
+        data: rows.map((row, i) => ({ productId: saved.id, name: row.name, value: row.value, sortOrder: i })),
+      });
+    }
   }
-  console.log(`  ✓ ${PRODUCTS.length} products with images and opening stock`);
+  console.log(`  ✓ ${PRODUCTS.length} simple products with a default variant, photos and opening stock`);
+
+  // --- variable products: options → variants, each with its own SKU/price/stock/photos/specs ---
+  for (const product of VARIABLE_PRODUCTS) {
+    // Seeded once. A variable product is rich administrator-owned data;
+    // re-running must never regenerate or overwrite it.
+    if (await prisma.product.findUnique({ where: { slug: product.slug }, select: { id: true } })) continue;
+
+    const category = await prisma.category.findUniqueOrThrow({ where: { slug: product.category } });
+    const cheapest = Math.min(...product.variants.map((v) => v.price));
+
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          slug: product.slug, sku: product.sku, name: product.name, type: "VARIABLE",
+          shortDescription: product.shortDescription, description: product.description,
+          minPrice: cheapest, currency: "PKR", status: "PUBLISHED", publishedAt: new Date(),
+          isFeatured: product.featured ?? false, badge: product.badge ?? null,
+          toneHex: product.tone, imageObjectPosition: product.objectPosition,
+          categoryId: category.id, sortOrder: 100,
+        },
+      });
+
+      // Options → attributes and values, remembering ids to wire variants up.
+      const valueId = new Map<string, string>(); // "Colour:Tan" → id
+      const attributeIds: string[] = [];
+      for (const [ai, attribute] of product.attributes.entries()) {
+        const a = await tx.productAttribute.create({
+          data: { productId: created.id, name: attribute.name, display: attribute.display, sortOrder: ai },
+        });
+        attributeIds.push(a.id);
+        for (const [vi, value] of attribute.values.entries()) {
+          const v = await tx.productAttributeValue.create({
+            data: { attributeId: a.id, value: value.value, swatchHex: value.swatchHex ?? null, sortOrder: vi },
+          });
+          valueId.set(`${attribute.name}:${value.value}`, v.id);
+        }
+      }
+
+      // Shared gallery
+      await tx.productImage.create({
+        data: {
+          productId: created.id, storagePath: product.sharedPhoto.path, altText: product.sharedPhoto.alt,
+          width: product.sharedPhoto.width, height: product.sharedPhoto.height, mimeType: "image/jpeg",
+          objectPosition: product.sharedPhoto.position ?? null, isPrimary: true, sortOrder: 0,
+        },
+      });
+
+      // Product-wide specifications
+      await tx.productSpecification.createMany({
+        data: product.specs.map((spec, i) => ({
+          productId: created.id, groupName: spec.group ?? null, name: spec.name, value: spec.value, sortOrder: i,
+        })),
+      });
+
+      // Variants
+      let defaultChosen = false;
+      for (const [index, def] of product.variants.entries()) {
+        const sellable = def.stock > 0;
+        const variant = await tx.productVariant.create({
+          data: {
+            productId: created.id, sku: def.sku, price: def.price, compareAtPrice: def.compareAtPrice ?? null,
+            stockQuantity: def.stock, sortOrder: index,
+            // The first variant a customer could actually buy opens the page.
+            isDefault: sellable && !defaultChosen,
+          },
+        });
+        if (sellable) defaultChosen = true;
+
+        await tx.variantOption.createMany({
+          data: def.options.map((value, i) => ({
+            variantId: variant.id,
+            attributeId: attributeIds[i],
+            valueId: valueId.get(`${product.attributes[i].name}:${value}`)!,
+          })),
+        });
+
+        if (def.stock > 0) {
+          await tx.inventoryTransaction.create({
+            data: {
+              variantId: variant.id, quantityDelta: def.stock, reason: "INITIAL_STOCK",
+              resultingQuantity: def.stock, note: "Opening stock from seed",
+            },
+          });
+        }
+
+        for (const [pi, photo] of (def.photos ?? []).entries()) {
+          await tx.productImage.create({
+            data: {
+              productId: created.id, variantId: variant.id, storagePath: photo.path, altText: photo.alt,
+              width: photo.width, height: photo.height, mimeType: "image/jpeg",
+              objectPosition: photo.position ?? null, isPrimary: pi === 0, sortOrder: pi,
+            },
+          });
+        }
+
+        if (def.specs?.length) {
+          await tx.productSpecification.createMany({
+            data: def.specs.map((spec, i) => ({
+              productId: created.id, variantId: variant.id, groupName: spec.group ?? null,
+              name: spec.name, value: spec.value, sortOrder: i,
+            })),
+          });
+        }
+      }
+    }, { timeout: 120_000, maxWait: 15_000 }); // many round trips to a remote database
+  }
+  console.log(`  ✓ ${VARIABLE_PRODUCTS.length} variable products with options, variants and per-variant photos`);
 
   // --- homepage content ---
   for (const section of HOMEPAGE_SECTIONS) {

@@ -19,8 +19,8 @@ export const SORTS = {
     orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
   },
   newest: { label: "Newest", orderBy: [{ createdAt: "desc" }] },
-  "price-asc": { label: "Price: low to high", orderBy: [{ price: "asc" }] },
-  "price-desc": { label: "Price: high to low", orderBy: [{ price: "desc" }] },
+  "price-asc": { label: "Price: low to high", orderBy: [{ minPrice: "asc" }] },
+  "price-desc": { label: "Price: high to low", orderBy: [{ minPrice: "desc" }] },
   name: { label: "Name: A–Z", orderBy: [{ name: "asc" }] },
 } satisfies Record<
   string,

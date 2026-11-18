@@ -40,6 +40,8 @@ export default async function AdminProductsPage({
           OR: [
             { name: { contains: query, mode: "insensitive" } },
             { sku: { contains: query, mode: "insensitive" } },
+            // A variant's SKU finds its product, so a code read off a box works.
+            { variants: { some: { sku: { contains: query, mode: "insensitive" } } } },
           ],
         }
       : {}),
@@ -54,7 +56,21 @@ export default async function AdminProductsPage({
           where,
           include: {
             category: { select: { name: true } },
-            images: { where: { isPrimary: true }, take: 1 },
+            images: {
+              where: { variantId: null },
+              orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+              take: 1,
+            },
+            variants: {
+              select: {
+                price: true,
+                stockQuantity: true,
+                lowStockThreshold: true,
+                trackInventory: true,
+                isActive: true,
+                images: { take: 1, orderBy: { sortOrder: "asc" } },
+              },
+            },
           },
           orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
           skip: (page - 1) * PAGE_SIZE,
@@ -95,7 +111,7 @@ export default async function AdminProductsPage({
           type="search"
           name="q"
           defaultValue={query}
-          placeholder="Search name or SKU…"
+          placeholder="Search name or SKU (including variant SKUs)…"
           aria-label="Search products"
           className="min-w-[14rem] flex-1 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus-visible:border-clay"
         />
@@ -132,16 +148,23 @@ export default async function AdminProductsPage({
                   <th scope="col" className="px-4 py-3 font-bold">SKU</th>
                   <th scope="col" className="px-4 py-3 font-bold">Category</th>
                   <th scope="col" className="px-4 py-3 text-right font-bold">Price</th>
+                  <th scope="col" className="px-4 py-3 text-right font-bold">Variants</th>
                   <th scope="col" className="px-4 py-3 text-right font-bold">Stock</th>
                   <th scope="col" className="px-4 py-3 font-bold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {result.rows.map((product) => {
-                  const image = product.images[0];
-                  const low =
-                    product.trackInventory &&
-                    product.stockQuantity <= product.lowStockThreshold;
+                  const image = product.images[0] ?? product.variants.flatMap((v) => v.images)[0];
+                  const active = product.variants.filter((v) => v.isActive);
+                  const prices = active.map((v) => Number(v.price));
+                  const lowest = prices.length ? Math.min(...prices) : 0;
+                  const highest = prices.length ? Math.max(...prices) : 0;
+                  const tracked = active.filter((v) => v.trackInventory);
+                  const totalStock = tracked.reduce((sum, v) => sum + v.stockQuantity, 0);
+                  // Any single sold-out or running-low variant is worth flagging,
+                  // even when the total across variants looks healthy.
+                  const low = tracked.some((v) => v.stockQuantity <= v.lowStockThreshold);
                   return (
                     <tr key={product.id} className="hover:bg-cream/60">
                       <td className="px-4 py-3">
@@ -167,6 +190,11 @@ export default async function AdminProductsPage({
                           </span>
                           <span className="font-semibold text-espresso hover:text-clay">
                             {product.name}
+                            {product.type === "VARIABLE" ? (
+                              <span className="ml-2 rounded-full bg-sand px-2 py-0.5 align-middle text-[0.62rem] font-bold uppercase tracking-wide text-espresso">
+                                Variable
+                              </span>
+                            ) : null}
                           </span>
                         </Link>
                       </td>
@@ -177,11 +205,21 @@ export default async function AdminProductsPage({
                         {product.category.name}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold">
-                        {formatMoney(product.price, result.symbol)}
+                        {active.length === 0
+                          ? "—"
+                          : lowest === highest
+                            ? formatMoney(lowest, result.symbol)
+                            : `${formatMoney(lowest, result.symbol)} – ${formatMoney(highest, result.symbol)}`}
+                      </td>
+                      <td className="px-4 py-3 text-right text-text-muted">
+                        {active.length}
+                        {product.variants.length > active.length ? (
+                          <span className="text-xs"> (+{product.variants.length - active.length} off)</span>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className={low ? "font-bold text-clay" : ""}>
-                          {product.trackInventory ? product.stockQuantity : "—"}
+                          {tracked.length > 0 ? totalStock : "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">

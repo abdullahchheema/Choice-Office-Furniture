@@ -8,6 +8,7 @@ import { whatsappDialNumber } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { getSettingsOrNull } from "@/lib/queries";
 import { ALLOWED_TRANSITIONS } from "@/lib/services/order-status";
+import { resolveImageSrc } from "@/lib/storage/resolve";
 
 export const metadata = { title: "Order" };
 
@@ -63,17 +64,41 @@ export default async function AdminOrderPage({
                 {order.items.map((item) => (
                   <tr key={item.id}>
                     <td className="px-6 py-3">
-                      <span className="block font-semibold text-espresso">
-                        {item.productName}
-                      </span>
-                      {/* The snapshot, not a live lookup — this is what was
-                          ordered, at the price it was ordered for. */}
-                      <span className="font-mono text-xs text-text-muted">
-                        {item.productSku} · {item.categoryName}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        {item.imagePath ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail
+                          <img
+                            src={resolveImageSrc(item.imagePath)}
+                            alt=""
+                            className="h-12 w-12 shrink-0 rounded-md border border-line object-cover"
+                          />
+                        ) : null}
+                        <div>
+                          <span className="block font-semibold text-espresso">
+                            {item.productName}
+                            {item.variantLabel ? (
+                              <span className="font-medium text-text-muted">
+                                {" "}
+                                — {item.variantLabel}
+                              </span>
+                            ) : null}
+                          </span>
+                          {/* The snapshot, not a live lookup — this is what was
+                              ordered, at the price it was ordered for. */}
+                          <span className="font-mono text-xs text-text-muted">
+                            {item.productSku} · {item.categoryName}
+                          </span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-3 text-right text-text-muted">
                       {formatMoney(item.unitPrice, symbol)} × {item.quantity}
+                      {item.compareAtPrice &&
+                      Number(item.compareAtPrice) > Number(item.unitPrice) ? (
+                        <span className="block text-xs line-through">
+                          {formatMoney(item.compareAtPrice, symbol)}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-6 py-3 text-right font-semibold">
                       {formatMoney(item.lineTotal, symbol)}

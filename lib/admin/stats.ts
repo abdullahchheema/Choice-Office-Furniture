@@ -26,14 +26,26 @@ export async function getDashboardStats() {
   ] = await Promise.all([
     prisma.product.count(),
     prisma.product.count({ where: { status: "PUBLISHED" } }),
-    prisma.product.count({
-      where: { trackInventory: true, stockQuantity: { lte: 0 } },
+    // Counted per VARIANT: a chair that is out in black but in stock in grey
+    // is one sold-out SKU, not a sold-out product. Archived products and
+    // deactivated variants are not stock the shop is trying to sell.
+    prisma.productVariant.count({
+      where: {
+        trackInventory: true,
+        isActive: true,
+        stockQuantity: { lte: 0 },
+        product: { status: { not: "ARCHIVED" } },
+      },
     }),
     prisma.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*)::bigint AS count FROM products
-      WHERE "trackInventory" = true
-        AND "stockQuantity" > 0
-        AND "stockQuantity" <= "lowStockThreshold"
+      SELECT COUNT(*)::bigint AS count
+      FROM product_variants v
+      JOIN products p ON p.id = v."productId"
+      WHERE v."trackInventory" = true
+        AND v."isActive" = true
+        AND p.status <> 'ARCHIVED'
+        AND v."stockQuantity" > 0
+        AND v."stockQuantity" <= v."lowStockThreshold"
     `,
     prisma.category.count({ where: { isActive: true } }),
     prisma.customer.count(),
@@ -61,7 +73,7 @@ export async function getDashboardStats() {
       },
     }),
     prisma.orderItem.groupBy({
-      by: ["productName", "productSku"],
+      by: ["productName", "productSku", "variantLabel"],
       _sum: { quantity: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5,

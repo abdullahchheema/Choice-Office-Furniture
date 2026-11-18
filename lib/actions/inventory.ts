@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth/guard";
 import { InsufficientStockError, adjustStock } from "@/lib/services/inventory";
 
 export async function adjustStockAction(
-  productId: string,
+  variantId: string,
   delta: number,
 ): Promise<{ error?: string } | void> {
   const admin = await requireAdmin();
@@ -17,7 +17,7 @@ export async function adjustStockAction(
 
   try {
     await adjustStock({
-      productId,
+      variantId,
       delta,
       reason: "MANUAL_ADJUSTMENT",
       note: "Adjusted from the inventory screen",

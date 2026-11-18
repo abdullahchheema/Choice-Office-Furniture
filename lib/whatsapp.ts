@@ -23,6 +23,9 @@ const MAX_MESSAGE_CHARS = 1600;
 
 export type WhatsappOrderLine = {
   productName: string;
+  /** "Black / Leather", when the product was ordered in a variant. */
+  variantLabel?: string | null;
+  /** The variant's SKU. */
   productSku: string;
   quantity: number;
   unitPrice: string;
@@ -54,7 +57,9 @@ export function renderOrderMessage(order: WhatsappOrderSummary): string {
 
   const itemLines = shown.map(
     (line, index) =>
-      `${index + 1}. ${line.productName} (${line.productSku})\n` +
+      `${index + 1}. ${line.productName}` +
+      (line.variantLabel ? ` — ${line.variantLabel}` : "") +
+      `\n   SKU: ${line.productSku}\n` +
       `   ${line.quantity} × ${money(line.unitPrice)} = ${money(line.lineTotal)}`,
   );
 

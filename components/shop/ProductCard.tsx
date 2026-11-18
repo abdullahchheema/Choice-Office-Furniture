@@ -41,7 +41,14 @@ export function ProductCard({
 
   const saved = hydrated && has(product.id);
   const delay = REVEAL_DELAYS[revealIndex % REVEAL_DELAYS.length] ?? 0;
-  const badge = product.badge ?? (product.isLowStock ? "Low stock" : null);
+  /*
+   * Badges: the admin's manual one wins; otherwise the computed ones. The sale
+   * badge is derived from the compare-at price, so it appears and disappears
+   * with the price instead of being typed in by hand.
+   */
+  const sale = product.discountPercent ? `-${product.discountPercent}%` : null;
+  const badge = product.badge ?? sale ?? (product.isLowStock ? "Low stock" : null);
+  const quickAddId = product.type === "SIMPLE" ? product.defaultVariantId : null;
 
   return (
     <li
@@ -67,7 +74,9 @@ export function ProductCard({
           />
         ) : null}
 
-        {badge ? <span className="badge">{badge}</span> : null}
+        {badge ? (
+          <span className={`badge${badge === sale ? " badge--sale" : ""}`}>{badge}</span>
+        ) : null}
 
         <button
           type="button"
@@ -79,18 +88,27 @@ export function ProductCard({
           <Icon name="i-heart" />
         </button>
 
-        <button
-          type="button"
-          className={`add${justAdded ? " added" : ""}`}
-          disabled={!product.inStock}
-          onClick={() => {
-            add(product.id);
-            setJustAdded(true);
-            setTimeout(() => setJustAdded(false), 1400);
-          }}
-        >
-          {!product.inStock ? "Out of stock" : justAdded ? "Added ✓" : "Add to cart"}
-        </button>
+        {quickAddId ? (
+          <button
+            type="button"
+            className={`add${justAdded ? " added" : ""}`}
+            disabled={!product.inStock}
+            onClick={() => {
+              add(quickAddId);
+              setJustAdded(true);
+              setTimeout(() => setJustAdded(false), 1400);
+            }}
+          >
+            {!product.inStock ? "Out of stock" : justAdded ? "Added ✓" : "Add to cart"}
+          </button>
+        ) : (
+          // A variable product has no single thing to add — the customer has to
+          // choose colour, size and so on, so the button goes to the page where
+          // they can.
+          <Link className="add is-link" href={`/products/${product.slug}`}>
+            {product.inStock ? "Select options" : "View — sold out"}
+          </Link>
+        )}
       </figure>
 
       <div className="card-body">
@@ -100,7 +118,11 @@ export function ProductCard({
             <Link href={`/products/${product.slug}`}>{product.name}</Link>
           </h3>
         </div>
-        <p className="price">{product.priceLabel}</p>
+        <p className="price">
+          {product.priceIsFrom ? <span className="from">From</span> : null}
+          {product.priceLabel}
+          {product.compareAtLabel ? <span className="was">{product.compareAtLabel}</span> : null}
+        </p>
       </div>
     </li>
   );

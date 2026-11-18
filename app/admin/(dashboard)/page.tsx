@@ -94,7 +94,7 @@ export default async function AdminOverviewPage() {
           {stats.outOfStock > 0 && (
             <Panel>
               <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-clay">
-                Out of stock
+                Variants out of stock
               </h2>
               <p className="mt-2 font-display text-3xl font-extrabold text-ink">
                 {stats.outOfStock}
@@ -110,7 +110,7 @@ export default async function AdminOverviewPage() {
           {stats.lowStock > 0 && (
             <Panel>
               <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-clay">
-                Low stock
+                Variants low on stock
               </h2>
               <p className="mt-2 font-display text-3xl font-extrabold text-ink">
                 {stats.lowStock}
@@ -184,6 +184,9 @@ export default async function AdminOverviewPage() {
                   </span>
                   <span className="min-w-0 flex-1 truncate font-semibold text-espresso">
                     {row.productName}
+                    {row.variantLabel ? (
+                      <span className="font-medium text-text-muted"> — {row.variantLabel}</span>
+                    ) : null}
                   </span>
                   <span className="text-text-muted">
                     {row._sum.quantity ?? 0} sold

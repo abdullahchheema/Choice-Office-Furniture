@@ -27,6 +27,20 @@ enum ProductStatus {
   ARCHIVED
 }
 
+/// SIMPLE products have exactly one (default) variant; VARIABLE products have
+/// one per combination of their attribute values. Either way the variant is
+/// what carries price, stock, SKU and images — so the cart, orders and the
+/// ledger never branch on product type.
+enum ProductType {
+  SIMPLE
+  VARIABLE
+}
+
+enum AttributeDisplay {
+  BUTTONS
+  SWATCHES
+}
+
 enum OrderStatus {
   PENDING_CONFIRMATION
   CONFIRMED
@@ -98,7 +112,8 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products Product[]
+  products      Product[]
+  specTemplates CategorySpecTemplate[]
 
   @@index([isActive, sortOrder])
   @@index([showOnHomepage, sortOrder])
@@ -108,25 +123,27 @@ model Category {
 model Product {
   id               String  @id @default(cuid())
   slug             String  @unique
+  /// Base code for the product. Each variant carries its own unique SKU; for a
+  /// simple product the default variant simply reuses this one.
   sku              String  @unique
   name             String
   shortDescription String? @db.VarChar(320)
   description      String?
 
-  price          Decimal  @db.Decimal(12, 2)
-  /// Original price, shown struck through when set. Must exceed `price`.
-  compareAtPrice Decimal? @db.Decimal(12, 2)
-  currency       String   @default("PKR") @db.VarChar(3)
+  type ProductType @default(SIMPLE)
 
-  stockQuantity     Int     @default(0)
-  lowStockThreshold Int     @default(3)
-  trackInventory    Boolean @default(true)
+  /// Cheapest active variant price. A denormalised sort/display key, kept in
+  /// step by syncProductSummary() in lib/services/variants.ts — the variants
+  /// are the source of truth, this exists so the shop can ORDER BY price.
+  minPrice Decimal @default(0) @db.Decimal(12, 2)
+  currency String  @default("PKR") @db.VarChar(3)
 
-  status      ProductStatus @default(DRAFT)
-  isFeatured  Boolean       @default(false)
-  isBestseller Boolean      @default(false)
-  badge       String?       @db.VarChar(32)
-  sortOrder   Int           @default(0)
+  status       ProductStatus @default(DRAFT)
+  isFeatured   Boolean       @default(false)
+  isBestseller Boolean       @default(false)
+  /// A manual badge. The "-20%" and "Low stock" badges are computed.
+  badge        String?       @db.VarChar(32)
+  sortOrder    Int           @default(0)
 
   /// Presentation knobs carried over from the hand-tuned cards. They are
   /// columns, not CSS, so the admin keeps per-product control of them.
@@ -134,40 +151,168 @@ model Product {
   imageObjectPosition String? @db.VarChar(24)
   imageLift           Boolean @default(false)
 
-  // Office-furniture attributes
-  material         String?
-  dimensions       String?
-  weightKg         Decimal? @db.Decimal(8, 2)
-  warrantyMonths   Int?
-  assemblyRequired Boolean  @default(true)
-
   metaTitle       String?
   metaDescription String? @db.VarChar(320)
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
-  images     ProductImage[]
-  orderItems OrderItem[]
-  inventory  InventoryTransaction[]
+  attributes     ProductAttribute[]
+  variants       ProductVariant[]
+  images         ProductImage[]
+  specifications ProductSpecification[]
+  orderItems     OrderItem[]
 
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Equality columns first so Postgres can satisfy the ORDER BY from the index.
-  @@index([status, categoryId, price])
-  @@index([status, price])
+  @@index([status, categoryId, minPrice])
+  @@index([status, minPrice])
   @@index([status, isFeatured, sortOrder])
   @@index([status, isBestseller, sortOrder])
   @@index([status, createdAt])
   @@map("products")
 }
 
+/// An option dimension of one product: Colour, Material, Size, Configuration…
+/// Per product rather than global, so an admin can invent "Armrest type" for
+/// one chair without it appearing on every desk.
+model ProductAttribute {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name      String           @db.VarChar(60)
+  display   AttributeDisplay @default(BUTTONS)
+  sortOrder Int              @default(0)
+
+  values  ProductAttributeValue[]
+  options VariantOption[]
+
+  @@unique([productId, name])
+  @@index([productId, sortOrder])
+  @@map("product_attributes")
+}
+
+model ProductAttributeValue {
+  id          String           @id @default(cuid())
+  attributeId String
+  attribute   ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  value     String  @db.VarChar(80)
+  /// Colour chip shown when the attribute displays as swatches.
+  swatchHex String? @db.VarChar(9)
+  sortOrder Int     @default(0)
+
+  options VariantOption[]
+
+  @@unique([attributeId, value])
+  @@index([attributeId, sortOrder])
+  @@map("product_attribute_values")
+}
+
+/// The sellable unit. Price, stock, SKU and images all live here.
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sku            String   @unique @db.VarChar(64)
+  price          Decimal  @db.Decimal(12, 2)
+  /// Regular price shown struck through. The discount % and the sale badge are
+  /// derived from this and `price`, never stored.
+  compareAtPrice Decimal? @db.Decimal(12, 2)
+
+  stockQuantity     Int     @default(0)
+  lowStockThreshold Int     @default(3)
+  trackInventory    Boolean @default(true)
+
+  /// Inactive variants are hidden from the shop but kept for order history.
+  isActive  Boolean @default(true)
+  /// Preselected on the product page; the only variant of a simple product.
+  isDefault Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  options        VariantOption[]
+  images         ProductImage[]
+  specifications ProductSpecification[]
+  orderItems     OrderItem[]
+  inventory      InventoryTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, isActive, sortOrder])
+  @@map("product_variants")
+}
+
+/// One chosen value per attribute, per variant. Restrict on the attribute and
+/// value, so an option a variant still depends on cannot be deleted out from
+/// under it and leave that variant with a silent gap in its description.
+///
+/// Consequence worth knowing: deleting a whole product must remove its variants
+/// FIRST. Cascades run as separate statements, so the attribute cascade can
+/// fire before the variants' option rows are gone and trip this constraint.
+/// deleteProduct() in lib/actions/products.ts does it in that order.
+model VariantOption {
+  variantId   String
+  variant     ProductVariant        @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attributeId String
+  attribute   ProductAttribute      @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  valueId     String
+  value       ProductAttributeValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, attributeId])
+  @@index([valueId])
+  @@map("variant_options")
+}
+
+/// A label/value pair. variantId null = applies to the whole product; set =
+/// applies to that variant and overrides a product spec of the same name.
+model ProductSpecification {
+  id        String          @id @default(cuid())
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  groupName String? @db.VarChar(60)
+  name      String  @db.VarChar(80)
+  value     String  @db.VarChar(400)
+  sortOrder Int     @default(0)
+
+  @@index([productId, variantId, sortOrder])
+  @@map("product_specifications")
+}
+
+/// The spec names a category usually needs ("Seat height", "Max load"…),
+/// offered as a starting point in the product form. Chairs, desks and
+/// accessories each describe themselves differently.
+model CategorySpecTemplate {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  groupName String? @db.VarChar(60)
+  name      String  @db.VarChar(80)
+  sortOrder Int     @default(0)
+
+  @@unique([categoryId, name])
+  @@index([categoryId, sortOrder])
+  @@map("category_spec_templates")
+}
+
 model ProductImage {
   id        String  @id @default(cuid())
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// null = shared product gallery; set = belongs to that variant, which then
+  /// shows only its own images. `isPrimary` is unique per scope.
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   /// The storage KEY, never a full URL — that is what makes the storage driver
   /// swappable without a data migration.
@@ -183,8 +328,10 @@ model ProductImage {
 
   createdAt DateTime @default(now())
 
-  @@unique([productId, storagePath])
+  /// No uniqueness on the path: two variants of one product may legitimately
+  /// share a photo (every width of the walnut desk shows the same walnut shot).
   @@index([productId, sortOrder])
+  @@index([variantId, sortOrder])
   @@map("product_images")
 }
 
@@ -291,13 +438,22 @@ model OrderItem {
   /// exactly the mutation these snapshots exist to prevent.
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   // ---- immutable snapshot, written once ----
   productName  String
+  /// The VARIANT's SKU — what the shop actually picks and ships.
   productSku   String  @db.VarChar(64)
+  /// "Black / Leather" and the structured form of it, as ordered.
+  variantLabel   String?
+  variantOptions Json?
   productSlug  String
   categoryName String
   unitPrice    Decimal @db.Decimal(12, 2)
+  /// Regular price at the time of the order, so the discount the customer saw
+  /// is reconstructable even after the variant is repriced.
+  compareAtPrice Decimal? @db.Decimal(12, 2)
   quantity     Int
   lineTotal    Decimal @db.Decimal(12, 2)
   imagePath    String?
@@ -306,6 +462,7 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+  @@index([variantId])
   @@map("order_items")
 }
 
@@ -332,11 +489,11 @@ model OrderStatusHistory {
 
 model InventoryTransaction {
   id        String @id @default(cuid())
-  productId String
+  variantId String
   /// Restrict, deliberately asymmetric with OrderItem: the ledger has to
-  /// reconcile against Product.stockQuantity, so a stocked product is archived
-  /// rather than hard-deleted.
-  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  /// reconcile against ProductVariant.stockQuantity, so a stocked variant is
+  /// deactivated rather than hard-deleted.
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   /// Signed: negative removes stock, positive adds.
   quantityDelta Int
@@ -357,8 +514,8 @@ model InventoryTransaction {
   /// The database-level proof against double-decrement. If the row lock and
   /// the stockCommitted flag are ever both defeated by a code change, this
   /// throws instead of letting stock drift silently.
-  @@unique([orderId, productId, reason], name: "uniq_order_product_reason")
-  @@index([productId, createdAt])
+  @@unique([orderId, variantId, reason], name: "uniq_order_variant_reason")
+  @@index([variantId, createdAt])
   @@index([reason, createdAt])
   @@map("inventory_transactions")
 }

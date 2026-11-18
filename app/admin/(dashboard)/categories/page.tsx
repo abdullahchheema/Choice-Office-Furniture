@@ -1,4 +1,5 @@
 import { CategoryEditor } from "@/components/admin/CategoryEditor";
+import { SpecTemplateEditor } from "@/components/admin/SpecTemplateEditor";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = { title: "Categories" };
@@ -6,7 +7,10 @@ export const metadata = { title: "Categories" };
 export default async function AdminCategoriesPage() {
   const categories = await prisma.category.findMany({
     orderBy: { sortOrder: "asc" },
-    include: { _count: { select: { products: true } } },
+    include: {
+      _count: { select: { products: true } },
+      specTemplates: { orderBy: { sortOrder: "asc" } },
+    },
   });
 
   return (
@@ -34,6 +38,17 @@ export default async function AdminCategoriesPage() {
           isActive: category.isActive,
           showOnHomepage: category.showOnHomepage,
           productCount: category._count.products,
+        }))}
+      />
+
+      <SpecTemplateEditor
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          templates: category.specTemplates.map((t) => ({
+            group: t.groupName ?? "",
+            name: t.name,
+          })),
         }))}
       />
     </div>

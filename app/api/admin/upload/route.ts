@@ -46,6 +46,11 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const file = form.get("file");
   const productId = form.get("productId");
+  // Optional: set when the photo belongs to one variant rather than the
+  // product's shared gallery.
+  const variantIdRaw = form.get("variantId");
+  const variantId =
+    typeof variantIdRaw === "string" && variantIdRaw.length > 0 ? variantIdRaw : null;
   const altText = String(form.get("altText") ?? "").trim();
 
   if (!(file instanceof File)) {
@@ -75,6 +80,18 @@ export async function POST(request: NextRequest) {
   });
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
+  // A client-supplied variant id is checked against the product, not trusted:
+  // otherwise a photo could be attached to another product's variant.
+  if (variantId) {
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId: product.id },
+      select: { id: true },
+    });
+    if (!variant) {
+      return NextResponse.json({ error: "Variant not found" }, { status: 404 });
+    }
   }
 
   const input = Buffer.from(await file.arrayBuffer());
@@ -132,11 +149,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Storage upload failed" }, { status: 502 });
   }
 
-  const existing = await prisma.productImage.count({ where: { productId } });
+  // Position and primary are per scope: the shared gallery and each variant's
+  // gallery are numbered independently.
+  const existing = await prisma.productImage.count({
+    where: { productId, variantId },
+  });
 
   const image = await prisma.productImage.create({
     data: {
       productId,
+      variantId,
       // The KEY, never the URL — resolving happens on read in lib/dto.ts, so
       // changing bucket or provider stays a config change.
       storagePath: stored.path,
@@ -150,7 +172,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  console.info(`[admin] ${admin.email} uploaded image ${image.id} for ${productId}`);
+  console.info(`[admin] ${admin.email} uploaded image ${image.id} for ${productId}${variantId ? ` / variant ${variantId}` : ""}`);
 
   return NextResponse.json({
     id: image.id,

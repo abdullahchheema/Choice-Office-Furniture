@@ -2,8 +2,20 @@ import "server-only";
 
 import { cache } from "react";
 
-import { toCategoryDTO, toProductDTO, type CategoryDTO, type ProductDTO } from "@/lib/dto";
+import {
+  CARD_INCLUDE,
+  DETAIL_INCLUDE,
+  MAX_LINE_QTY,
+  toCategoryDTO,
+  toProductDetailDTO,
+  toProductDTO,
+  type CategoryDTO,
+  type ProductDetailDTO,
+  type ProductDTO,
+} from "@/lib/dto";
 import { prisma } from "@/lib/prisma";
+import { resolveImageSrc } from "@/lib/storage/resolve";
+import { variantLabel } from "@/lib/variants";
 
 /**
  * Read paths for the storefront.
@@ -13,10 +25,13 @@ import { prisma } from "@/lib/prisma";
  * reads settings in three places.
  */
 
-const PRODUCT_INCLUDE = {
-  category: { select: { name: true, slug: true } },
-  images: { orderBy: { sortOrder: "asc" } },
-} as const;
+/*
+ * A product is only listed when something under it can be sold: published, and
+ * with at least one active variant. Without the second condition a variable
+ * product whose variants were all deactivated would show on the shop with no
+ * price and nothing to buy.
+ */
+const LISTED = { status: "PUBLISHED", variants: { some: { isActive: true } } } as const;
 
 export const getSettings = cache(async () => {
   const settings = await prisma.websiteSetting.findUnique({
@@ -44,8 +59,8 @@ export const getSettingsOrNull = cache(async () => {
 export const getFeaturedProducts = cache(async (limit = 8): Promise<ProductDTO[]> => {
   const settings = await getSettingsOrNull();
   const products = await prisma.product.findMany({
-    where: { status: "PUBLISHED", isFeatured: true },
-    include: PRODUCT_INCLUDE,
+    where: { ...LISTED, isFeatured: true },
+    include: CARD_INCLUDE,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     take: limit,
   });
@@ -58,8 +73,8 @@ export const getFeaturedProducts = cache(async (limit = 8): Promise<ProductDTO[]
 export const getShopProducts = cache(async (limit = 12): Promise<ProductDTO[]> => {
   const settings = await getSettingsOrNull();
   const products = await prisma.product.findMany({
-    where: { status: "PUBLISHED" },
-    include: PRODUCT_INCLUDE,
+    where: { ...LISTED },
+    include: CARD_INCLUDE,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     take: limit,
   });
@@ -90,34 +105,108 @@ export const getActiveCategories = cache(async (): Promise<CategoryDTO[]> => {
 });
 
 /**
- * Minimal product data the cart needs to render a line.
+ * What the cart needs to render one line — and a "line" is a VARIANT.
  *
- * The cart stores ids and quantities only; names, prices and images are
- * resolved from here on every render, so a price edited in the admin is
- * reflected immediately and a stale localStorage entry can never show a stale
- * price. Phase 5's checkout re-reads them again server-side regardless.
+ * The cart stores variant ids and quantities only; names, options, SKUs,
+ * prices, photos and stock are resolved from here on every render, so a price
+ * edited in the admin is reflected immediately and a stale localStorage entry
+ * can never show a stale price. Checkout re-reads every one of them again
+ * server-side regardless.
  */
 export type CartCatalogEntry = {
+  /** The variant id — what the cart stores and checkout submits. */
   id: string;
+  productId: string;
   slug: string;
   name: string;
+  /** "Black / Leather", or null for a simple product. */
+  variantLabel: string | null;
+  sku: string;
   priceLabel: string;
   priceValue: string;
   image: { src: string; objectPosition: string | null } | null;
+  inStock: boolean;
+  /** The most one order may take of this variant. */
+  maxQty: number;
 };
 
 export const getCartCatalog = cache(async (): Promise<CartCatalogEntry[]> => {
-  const products = await getShopProducts(500);
-  return products.map((product) => ({
-    id: product.id,
-    slug: product.slug,
-    name: product.name,
-    priceLabel: product.priceLabel,
-    priceValue: product.priceValue,
-    image: product.image
-      ? { src: product.image.src, objectPosition: product.image.objectPosition }
-      : null,
-  }));
+  const settings = await getSettingsOrNull();
+  const symbol = settings?.currencySymbol ?? "Rs.";
+
+  const variants = await prisma.productVariant.findMany({
+    where: { isActive: true, product: { status: "PUBLISHED" } },
+    orderBy: [{ productId: "asc" }, { sortOrder: "asc" }],
+    take: 2000,
+    include: {
+      images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
+      options: {
+        include: {
+          attribute: { select: { sortOrder: true, name: true } },
+          value: { select: { value: true } },
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          type: true,
+          imageObjectPosition: true,
+          images: {
+            where: { variantId: null },
+            orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  return variants.map((variant) => {
+    const label = variantLabel(
+      [...variant.options]
+        .sort((a, b) => a.attribute.sortOrder - b.attribute.sortOrder)
+        .map((o) => ({ name: o.attribute.name, value: o.value.value })),
+    );
+    // A variant's own photo wins; otherwise the product's shared one.
+    const photo = variant.images[0] ?? variant.product.images[0] ?? null;
+    const price = Number(variant.price);
+    return {
+      id: variant.id,
+      productId: variant.product.id,
+      slug: variant.product.slug,
+      name: variant.product.name,
+      variantLabel: label || null,
+      sku: variant.sku,
+      priceLabel: `${symbol} ${new Intl.NumberFormat("en-US").format(Math.round(price))}`,
+      priceValue: variant.price.toFixed(2),
+      image: photo
+        ? {
+            src: resolveImageSrc(photo.storagePath),
+            objectPosition: photo.objectPosition ?? variant.product.imageObjectPosition,
+          }
+        : null,
+      inStock: !variant.trackInventory || variant.stockQuantity > 0,
+      maxQty: variant.trackInventory
+        ? Math.min(MAX_LINE_QTY, Math.max(0, variant.stockQuantity))
+        : MAX_LINE_QTY,
+    };
+  });
+});
+
+/** The product page's data: a published product with sellable variants, or null. */
+export const getProductDetail = cache(async (slug: string): Promise<ProductDetailDTO | null> => {
+  const [product, settings] = await Promise.all([
+    prisma.product.findFirst({
+      // status in the WHERE, not checked afterwards: a DRAFT or ARCHIVED product
+      // must 404, not render with a "not available" notice search engines index.
+      where: { slug, ...LISTED },
+      include: DETAIL_INCLUDE,
+    }),
+    getSettingsOrNull(),
+  ]);
+  return product ? toProductDetailDTO(product, settings?.currencySymbol ?? "Rs.") : null;
 });
 
 export const getHomepageSections = cache(async () => {

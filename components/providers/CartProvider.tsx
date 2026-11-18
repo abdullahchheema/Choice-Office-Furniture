@@ -14,11 +14,11 @@ import type { CartCatalogEntry } from "@/lib/queries";
  * last week can never display a stale amount. Phase 5's checkout re-prices
  * from the database again regardless — the client is never trusted with money.
  */
-export type CartLine = { id: string; qty: number };
+export type CartLine = { id: string; qty: number }; // id = variant id
 
-/** Namespaced and versioned: product ids changed shape when the database
- *  arrived, so anything saved under an older key is discarded, not misread. */
-const STORAGE_KEY = "cof-cart-v2";
+/** Namespaced and versioned: a cart line became a VARIANT id when variants
+ *  arrived, so a v2 cart (product ids) is discarded rather than misread. */
+const STORAGE_KEY = "cof-cart-v3";
 
 /**
  * The idempotency key for whatever order this cart becomes.
@@ -45,7 +45,7 @@ type CartContextValue = {
   isOpen: boolean;
   open: () => void;
   close: () => void;
-  add: (id: string) => void;
+  add: (id: string, qty?: number) => void;
   setQty: (id: string, qty: number) => void;
   remove: (id: string) => void;
   clear: () => void;
@@ -105,29 +105,47 @@ export function CartProvider({
   );
 
   const add = useCallback(
-    (id: string) => {
+    (id: string, qty = 1) => {
       const product = byId.get(id);
       if (!product) return;
+      if (!product.inStock || product.maxQty < 1) {
+        toast(`${displayName(product)} is out of stock`);
+        return;
+      }
+
+      let capped = false;
       setLines((current) => {
         const existing = current.find((line) => line.id === id);
+        const wanted = (existing?.qty ?? 0) + qty;
+        // Never more than the variant's own stock: a chair in black selling out
+        // says nothing about the grey one.
+        const next = Math.min(wanted, product.maxQty);
+        capped = next < wanted;
         return existing
-          ? current.map((line) => (line.id === id ? { ...line, qty: line.qty + 1 } : line))
-          : [...current, { id, qty: 1 }];
+          ? current.map((line) => (line.id === id ? { ...line, qty: next } : line))
+          : [...current, { id, qty: next }];
       });
       // Mint the key the moment the cart stops being empty, not at submit.
       setIdempotencyKey((current) => current ?? crypto.randomUUID());
-      toast(`${product.name} added to your cart`);
+      toast(
+        capped
+          ? `Only ${product.maxQty} of ${displayName(product)} available`
+          : `${displayName(product)} added to your cart`,
+      );
     },
     [byId, setLines, setIdempotencyKey, toast],
   );
 
   const setQty = useCallback(
     (id: string, qty: number) => {
+      const cap = byId.get(id)?.maxQty ?? 99;
       setLines((current) =>
-        current.map((line) => (line.id === id ? { ...line, qty: Math.max(1, qty) } : line)),
+        current.map((line) =>
+          line.id === id ? { ...line, qty: Math.max(1, Math.min(qty, Math.max(1, cap))) } : line,
+        ),
       );
     },
-    [setLines],
+    [byId, setLines],
   );
 
   const remove = useCallback(
@@ -178,6 +196,11 @@ export function CartProvider({
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+}
+
+/** "Meridian Executive Chair — Black / Leather". */
+function displayName(entry: CartCatalogEntry): string {
+  return entry.variantLabel ? `${entry.name} — ${entry.variantLabel}` : entry.name;
 }
 
 export function useCart(): CartContextValue {

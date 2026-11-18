@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { adjustStockAction } from "@/lib/actions/inventory";
 
 /** Inline +/- adjustment. Every change writes a ledger row server-side. */
-export function StockAdjuster({ productId }: { productId: string }) {
+export function StockAdjuster({ variantId }: { variantId: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [amount, setAmount] = useState("");
@@ -20,7 +20,7 @@ export function StockAdjuster({ productId }: { productId: string }) {
     }
     setError(null);
     startTransition(async () => {
-      const result = await adjustStockAction(productId, sign * value);
+      const result = await adjustStockAction(variantId, sign * value);
       if (result?.error) setError(result.error);
       else {
         setAmount("");

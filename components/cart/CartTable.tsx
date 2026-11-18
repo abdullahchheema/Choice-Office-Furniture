@@ -48,6 +48,7 @@ export function CartTable({
     );
   }
 
+  const blocked = items.some(({ product, qty }) => qty > product.maxQty);
   const threshold = freeShippingThreshold ? Number(freeShippingThreshold) : null;
   const qualifies = threshold !== null && subtotalValue >= threshold;
   const shipping = qualifies ? 0 : Number(shippingFee);
@@ -77,7 +78,21 @@ export function CartTable({
                 <p className="line-title">
                   <Link href={`/products/${product.slug}`}>{product.name}</Link>
                 </p>
-                <p className="line-meta">{product.priceLabel} each</p>
+                {product.variantLabel ? (
+                  <p className="line-meta" style={{ fontWeight: 700 }}>
+                    {product.variantLabel}
+                  </p>
+                ) : null}
+                <p className="line-meta">
+                  {product.priceLabel} each · SKU {product.sku}
+                </p>
+                {qty > product.maxQty ? (
+                  <p className="line-meta" style={{ color: "#a3301b", fontWeight: 700 }}>
+                    {product.maxQty === 0
+                      ? "Out of stock — remove this item to continue"
+                      : `Only ${product.maxQty} available — reduce the quantity`}
+                  </p>
+                ) : null}
 
                 <div className="stepper" style={{ marginTop: 10 }} role="group">
                   <button
@@ -92,7 +107,7 @@ export function CartTable({
                   <button
                     type="button"
                     aria-label={`Increase quantity of ${product.name}`}
-                    disabled={qty >= 99}
+                    disabled={qty >= product.maxQty}
                     onClick={() => setQty(product.id, qty + 1)}
                   >
                     +
@@ -143,13 +158,20 @@ export function CartTable({
         ) : null}
         {shippingNote ? <p className="free-ship-note">{shippingNote}</p> : null}
 
-        <Link
-          className="btn btn--primary btn--block"
-          href="/checkout"
-          style={{ marginTop: 22 }}
-        >
-          Continue to checkout
-        </Link>
+        {blocked ? (
+          <p className="form-error" role="alert" style={{ marginTop: 22 }}>
+            Some items are no longer available in the quantity in your cart. Adjust
+            them to continue.
+          </p>
+        ) : (
+          <Link
+            className="btn btn--primary btn--block"
+            href="/checkout"
+            style={{ marginTop: 22 }}
+          >
+            Continue to checkout
+          </Link>
+        )}
 
         <p className="hint" style={{ marginTop: 14, textAlign: "center" }}>
           No online payment. We confirm your order on WhatsApp.

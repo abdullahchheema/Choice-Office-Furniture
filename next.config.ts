@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
    */
   cacheComponents: false,
 
+  /**
+   * Dev only. Next 16 refuses client JS and the HMR socket to any origin other
+   * than `localhost`, so a page opened at http://127.0.0.1:3000 loads as plain,
+   * un-hydrated HTML — forms still post, but nothing interactive works. Listing
+   * the loopback address makes both spellings behave identically. It has no
+   * effect on production builds.
+   */
+  allowedDevOrigins: ["127.0.0.1"],
+
   turbopack: {
     rules: {
       "*.css": {

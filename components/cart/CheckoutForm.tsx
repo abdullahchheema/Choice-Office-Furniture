@@ -181,6 +181,14 @@ export function CheckoutForm({
             >
               <span>
                 {qty} × {product.name}
+                {product.variantLabel ? (
+                  <>
+                    <br />
+                    <span className="line-meta">
+                      {product.variantLabel} · {product.sku}
+                    </span>
+                  </>
+                ) : null}
               </span>
               <strong style={{ whiteSpace: "nowrap" }}>
                 {money(Number(product.priceValue) * qty)}

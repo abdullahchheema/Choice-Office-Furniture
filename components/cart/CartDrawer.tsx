@@ -158,6 +158,9 @@ export function CartDrawer() {
 
                 <div>
                   <h3>{product.name}</h3>
+                  {product.variantLabel ? (
+                    <p className="unit">{product.variantLabel}</p>
+                  ) : null}
                   <p className="unit">{product.priceLabel}</p>
                   <div className="qty" role="group">
                     <button
@@ -171,6 +174,7 @@ export function CartDrawer() {
                     <button
                       type="button"
                       aria-label={`Increase quantity of ${product.name}`}
+                      disabled={qty >= product.maxQty}
                       onClick={() => setQty(product.id, qty + 1)}
                     >
                       +
