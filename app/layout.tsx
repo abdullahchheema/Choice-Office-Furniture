@@ -1,20 +1,18 @@
 import type { Metadata, Viewport } from "next";
 
-import { CartDrawer } from "@/components/cart/CartDrawer";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SvgSprite } from "@/components/layout/SvgSprite";
-import { CartProvider } from "@/components/providers/CartProvider";
-import { ShopFilterProvider } from "@/components/providers/ShopFilterProvider";
-import { ToastProvider } from "@/components/providers/ToastProvider";
-import { WishlistProvider } from "@/components/providers/WishlistProvider";
-import { ReadyFlag } from "@/components/system/ReadyFlag";
-import { ScrollReveal } from "@/components/system/ScrollReveal";
 import { fontVariables } from "@/lib/fonts";
-import { getCartCatalog, getSettingsOrNull } from "@/lib/queries";
-import { safeQuery } from "@/lib/safe";
 
 import "./globals.css";
+
+/*
+ * Root layout — only what the storefront and the admin genuinely share:
+ * the document shell, fonts and the icon sprite.
+ *
+ * The storefront's chrome (header, footer, cart drawer, scroll animations)
+ * lives in app/(storefront)/layout.tsx, so the admin does not inherit a
+ * shopping cart and a scroll-reveal observer it has no use for.
+ */
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -40,20 +38,9 @@ export const viewport: Viewport = {
   themeColor: "#F7F1E8",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  /*
-   * The cart stores ids and quantities only, so it needs the catalog to render
-   * a line. Supplying it from the server means a price edited in the admin is
-   * reflected immediately, and a cart saved last week can never show a stale
-   * amount.
-   */
-  const [catalog, settings] = await Promise.all([
-    safeQuery("cart catalog", getCartCatalog, []),
-    safeQuery("settings", getSettingsOrNull, null),
-  ]);
-
   return (
     /*
      * `js` is static rather than script-added, so the pre-animation hidden
@@ -62,29 +49,8 @@ export default async function RootLayout({
      */
     <html lang="en" className={`js ${fontVariables}`}>
       <body>
-        <ReadyFlag />
-        <ScrollReveal />
         <SvgSprite />
-
-        <ToastProvider>
-          <WishlistProvider>
-            <CartProvider
-              catalog={catalog}
-              currencySymbol={settings?.currencySymbol ?? "Rs."}
-            >
-              <ShopFilterProvider>
-                <a className="skip-link" href="#main">
-                  Skip to content
-                </a>
-
-                <SiteHeader />
-                <main id="main">{children}</main>
-                <SiteFooter />
-                <CartDrawer />
-              </ShopFilterProvider>
-            </CartProvider>
-          </WishlistProvider>
-        </ToastProvider>
+        {children}
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import type { Category, Product, ProductImage } from "@prisma/client";
 
 import { discountPercent, toMoneyString } from "@/lib/money";
+import { resolveImageSrc } from "@/lib/storage/resolve";
 
 /**
  * Serialisable shapes for crossing into client components.
@@ -90,7 +91,7 @@ export function toProductDTO(product: ProductRow, currencySymbol = "Rs."): Produ
       product.stockQuantity <= product.lowStockThreshold,
     image: primary
       ? {
-          src: primary.storagePath,
+          src: resolveImageSrc(primary.storagePath),
           alt: primary.altText,
           width: primary.width,
           height: primary.height,
