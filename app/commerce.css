@@ -1,0 +1,491 @@
+/* ============================================================
+   Commerce surfaces — cart, checkout, order, product detail, shop.
+   New in Phase 5. Written in the existing visual language (same
+   tokens, same radii, same easings) but kept in its own file so
+   storefront.css stays the untouched fidelity baseline.
+   ============================================================ */
+
+.shell--narrow { width: min(100% - var(--gutter) * 2, 920px); margin-inline: auto; }
+.shell--wide { width: min(100% - var(--gutter) * 2, 1240px); margin-inline: auto; }
+
+.section--flush { padding-top: clamp(48px, 7vw, 92px); }
+
+/* ---------------------------------- page heads ---------------------------- */
+
+.page-head { margin-bottom: clamp(32px, 5vw, 56px); }
+.page-head h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "opsz" 96;
+  font-size: clamp(2rem, 4.4vw, 3.1rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.page-head .lede { color: var(--text-muted); margin-top: 14px; max-width: 58ch; }
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+.crumbs a { color: inherit; text-decoration: none; }
+.crumbs a:hover { color: var(--clay); }
+.crumbs span[aria-hidden] { opacity: 0.45; }
+
+/* ---------------------------------- panels -------------------------------- */
+
+.panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: clamp(20px, 3vw, 32px);
+}
+.panel + .panel { margin-top: 20px; }
+.panel > h2,
+.panel > h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "opsz" 96;
+  font-size: 1.22rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.panel .hint { color: var(--text-muted); font-size: 0.88rem; }
+
+.commerce-layout {
+  display: grid;
+  gap: clamp(20px, 3vw, 32px);
+  align-items: start;
+}
+@media (min-width: 920px) {
+  .commerce-layout { grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); }
+  .commerce-layout .summary { position: sticky; top: 104px; }
+}
+
+/* ---------------------------------- cart lines ---------------------------- */
+
+.line-list { list-style: none; display: grid; gap: 4px; }
+.line-item {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.line-item:last-child { border-bottom: 0; }
+.line-media {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--sand);
+}
+.line-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.line-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variation-settings: "opsz" 96;
+  font-size: 1.04rem;
+  color: var(--ink);
+}
+.line-title a { color: inherit; text-decoration: none; }
+.line-title a:hover { color: var(--clay); }
+.line-meta { color: var(--text-muted); font-size: 0.84rem; margin-top: 3px; }
+.line-amount {
+  text-align: right;
+  font-weight: 800;
+  color: var(--espresso);
+  white-space: nowrap;
+}
+.line-remove {
+  display: block;
+  margin-top: 6px;
+  margin-left: auto;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.line-remove:hover { color: var(--clay); }
+
+@media (max-width: 560px) {
+  .line-item { grid-template-columns: 72px minmax(0, 1fr); }
+  .line-amount { grid-column: 2; text-align: left; margin-top: 6px; }
+  .line-remove { margin-left: 0; }
+}
+
+/* ---------------------------------- totals -------------------------------- */
+
+.totals { list-style: none; display: grid; gap: 12px; }
+.totals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+.totals li strong { color: var(--espresso); font-weight: 700; }
+.totals .grand {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 2px;
+  font-size: 1.06rem;
+  color: var(--ink);
+}
+.totals .grand span,
+.totals .grand strong { font-weight: 800; color: var(--ink); }
+.totals .grand strong { font-size: 1.3rem; }
+
+.free-ship-note {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--linen);
+  color: var(--espresso);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ---------------------------------- forms ---------------------------------
+   NB: `.field` is already taken — storefront.css uses it for the newsletter
+   signup, a cream pill on a dark panel. Reusing it here turned that input into
+   a white 12px box; the computed-style fingerprint caught it. These rules are
+   therefore `.form-field`. */
+
+.field-grid { display: grid; gap: 16px; }
+@media (min-width: 620px) { .field-grid--2 { grid-template-columns: 1fr 1fr; } }
+.field-grid .span-2 { grid-column: 1 / -1; }
+
+.form-field > label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.form-field input,
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.form-field textarea { min-height: 96px; resize: vertical; }
+.form-field input:hover,
+.form-field textarea:hover { border-color: rgba(59, 42, 30, 0.28); }
+.form-field input:focus-visible,
+.form-field textarea:focus-visible,
+.form-field select:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
+.form-field .error { margin-top: 5px; font-size: 0.8rem; font-weight: 700; color: #a3301b; }
+.form-field [aria-invalid="true"] { border-color: #a3301b; }
+.form-field .help { margin-top: 5px; font-size: 0.78rem; color: var(--text-muted); }
+
+.form-error {
+  border: 1px solid rgba(163, 48, 27, 0.3);
+  background: rgba(163, 48, 27, 0.05);
+  color: #8a2817;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ---------------------------------- empty state --------------------------- */
+
+.empty-state { text-align: center; padding: clamp(40px, 8vw, 88px) 0; }
+.empty-state h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "opsz" 96;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  color: var(--ink);
+}
+.empty-state p { color: var(--text-muted); margin: 12px auto 26px; max-width: 42ch; }
+
+/* ---------------------------------- order confirmation -------------------- */
+
+.order-ref {
+  text-align: center;
+  background: var(--linen);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: clamp(28px, 5vw, 48px);
+}
+.order-ref .eyebrow { margin-bottom: 12px; }
+.order-ref strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-variation-settings: "opsz" 96;
+  font-size: clamp(1.9rem, 5vw, 2.9rem);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.order-ref .sub { color: var(--text-muted); margin-top: 14px; max-width: 48ch; margin-inline: auto; }
+
+.wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #1f8c4d;
+  color: #fff;
+  border: 1px solid #1a7a43;
+  border-radius: 999px;
+  padding: 15px 30px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+.wa-btn:hover { background: #1a7a43; box-shadow: 0 14px 30px -14px rgba(26, 122, 67, 0.65); }
+.wa-btn .icon { width: 20px; height: 20px; }
+
+.msg-box {
+  width: 100%;
+  font: inherit;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  min-height: 190px;
+  color: var(--espresso);
+  resize: vertical;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--sand);
+  color: var(--ink);
+}
+
+/* ---------------------------------- product detail ------------------------ */
+
+.pdp { display: grid; gap: clamp(28px, 4vw, 56px); align-items: start; }
+@media (min-width: 900px) { .pdp { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
+
+.pdp-gallery { display: grid; gap: 14px; }
+.pdp-main {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--tone, var(--sand));
+  position: relative;
+}
+.pdp-main img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pdp-thumbs { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; }
+.pdp-thumbs li { width: 78px; }
+.pdp-thumbs button {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--sand);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+.pdp-thumbs button[aria-current="true"] { border-color: var(--espresso); }
+.pdp-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.pdp-info h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "opsz" 96;
+  font-size: clamp(1.9rem, 3.8vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-top: 8px;
+}
+.pdp-price { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 20px 0; }
+.pdp-price .now { font-size: 1.65rem; font-weight: 800; color: var(--ink); }
+.pdp-price .was { color: var(--text-muted); text-decoration: line-through; font-weight: 600; }
+.pdp-price .off {
+  background: var(--clay);
+  color: var(--cream);
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pdp-desc { color: var(--text-muted); line-height: 1.7; }
+.pdp-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0; }
+.pdp-actions .btn { flex: 1 1 200px; }
+
+.spec-list {
+  list-style: none;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.spec-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  background: #fff;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+}
+.spec-list dt { color: var(--text-muted); font-weight: 600; }
+.spec-list dd { color: var(--espresso); font-weight: 700; text-align: right; }
+
+.stock-line { display: flex; align-items: center; gap: 9px; font-size: 0.88rem; font-weight: 700; }
+.stock-line .dot { width: 9px; height: 9px; border-radius: 50%; background: #1f8c4d; }
+.stock-line.is-low .dot { background: var(--oak); }
+.stock-line.is-out .dot { background: #a3301b; }
+.stock-line.is-out { color: #a3301b; }
+
+/* ---------------------------------- qty stepper --------------------------- */
+
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; }
+.stepper button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 1.1rem;
+  color: var(--espresso);
+  cursor: pointer;
+  border-radius: 999px;
+}
+.stepper button:hover:not(:disabled) { background: var(--linen); }
+.stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+.stepper span { min-width: 34px; text-align: center; font-weight: 800; }
+
+/* The "View all" chip is a link among buttons, so it needs the anchor resets
+   the original chip rules never had to make. */
+a.chip { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* The card title became a link when product pages arrived; it has to look
+   exactly as the plain heading did. */
+.card-body h3 a { color: inherit; text-decoration: none; }
+.card-body h3 a:hover { color: var(--clay); }
+
+/* ---------------------------------- shop layout --------------------------- */
+
+.shop-layout { display: grid; gap: clamp(24px, 3vw, 40px); align-items: start; }
+@media (min-width: 1000px) { .shop-layout { grid-template-columns: 260px minmax(0, 1fr); } }
+
+.facets { display: grid; gap: 22px; }
+.facets fieldset { border: 0; padding: 0; }
+.facets legend {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.facets ul { list-style: none; display: grid; gap: 2px; }
+.facet-link {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--espresso);
+  text-decoration: none;
+  transition: background var(--t-fast) var(--ease-out);
+}
+.facet-link:hover { background: var(--linen); }
+.facet-link[aria-current="true"] { background: var(--espresso); color: var(--cream); font-weight: 800; }
+.facet-link .count { font-size: 0.76rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+.shop-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.shop-count { color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
+
+.search-row { display: flex; gap: 8px; }
+.search-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #fff;
+}
+.search-row input:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
+
+.sort-select {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.86rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: #fff;
+  color: var(--espresso);
+}
+
+.pager { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: clamp(36px, 5vw, 64px); }
+.pager a,
+.pager span {
+  min-width: 42px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--espresso);
+  border: 1px solid var(--line);
+}
+.pager a:hover { background: var(--linen); }
+.pager [aria-current="page"] { background: var(--espresso); color: var(--cream); border-color: var(--espresso); }
+.pager .gap { border: 0; min-width: 20px; color: var(--text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-btn,
+  .facet-link,
+  .form-field input,
+  .form-field textarea,
+  .pdp-thumbs button { transition: none; }
+}

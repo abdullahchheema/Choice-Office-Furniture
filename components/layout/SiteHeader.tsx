@@ -1,26 +1,44 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Icon, Logo } from "@/components/layout/SvgSprite";
 import { useCart } from "@/components/providers/CartProvider";
 import { useMediaQuery, useScrolled, useScrollSpy } from "@/lib/hooks";
 
+/*
+ * Two kinds of nav item now exist, and they behave differently.
+ *
+ * `route` items are real pages. `section` items are homepage anchors, which
+ * only work while you are on the homepage — from /cart or /shop, a bare
+ * "#craft" scrolls to nothing at all. So off the homepage they become "/#craft"
+ * and navigate home first.
+ *
+ * Shop became a route when the catalogue page arrived: a nav item called Shop
+ * should lead to the whole catalogue, not scroll to the homepage's featured
+ * strip. It is therefore no longer in the scroll-spy's section list.
+ */
 const NAV_LINKS = [
-  { href: "#collections", id: "collections", label: "Collections" },
-  { href: "#shop", id: "shop", label: "Shop" },
-  { href: "#craft", id: "craft", label: "Craftsmanship" },
-  { href: "#finishes", id: "finishes", label: "Finishes" },
-  { href: "#visit", id: "visit", label: "Showroom" },
+  { kind: "route", href: "/shop", id: "shop", label: "Shop" },
+  { kind: "section", id: "collections", label: "Collections" },
+  { kind: "section", id: "craft", label: "Craftsmanship" },
+  { kind: "section", id: "finishes", label: "Finishes" },
+  { kind: "section", id: "visit", label: "Showroom" },
 ] as const;
 
-const SECTION_IDS = NAV_LINKS.map((link) => link.id);
+const SECTION_IDS = NAV_LINKS.filter((link) => link.kind === "section").map(
+  (link) => link.id,
+);
 
 export function SiteHeader() {
   const scrolled = useScrolled(24);
   const activeSection = useScrollSpy(SECTION_IDS);
   const isDesktop = useMediaQuery("(min-width: 901px)");
   const { count, hydrated, open } = useCart();
+  const pathname = usePathname();
+  const onHome = pathname === "/";
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [bump, setBump] = useState(false);
@@ -73,9 +91,15 @@ export function SiteHeader() {
    * on-brand transition rather than a flash of the wrong number.
    */
   const showBadge = hydrated && count > 0;
+  /*
+   * The unscrolled header is cream text designed to sit over the hero photo.
+   * Only the homepage has that photo — anywhere else the wordmark and nav are
+   * cream on cream, i.e. invisible — so off the homepage the header starts in
+   * its solid, scrolled state.
+   */
   const headerClass = [
     "site-header",
-    scrolled ? "scrolled" : "",
+    scrolled || !onHome ? "scrolled" : "",
     menuShowing ? "menu-open" : "",
   ]
     .filter(Boolean)
@@ -92,17 +116,42 @@ export function SiteHeader() {
           aria-label="Primary"
         >
           <ul>
-            {NAV_LINKS.map((link) => (
-              <li key={link.id}>
-                <a
-                  href={link.href}
-                  className={activeSection === link.id ? "active" : undefined}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const isRoute = link.kind === "route";
+              const href = isRoute
+                ? link.href
+                : onHome
+                  ? `#${link.id}`
+                  : `/#${link.id}`;
+              const active = isRoute
+                ? pathname.startsWith(link.href)
+                : onHome && activeSection === link.id;
+
+              return (
+                <li key={link.id}>
+                  {/* An in-page anchor stays a plain <a>: next/link would
+                      intercept it and the native smooth scroll is the
+                      behaviour the original had. */}
+                  {isRoute ? (
+                    <Link
+                      href={href}
+                      className={active ? "active" : undefined}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a
+                      href={href}
+                      className={active ? "active" : undefined}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

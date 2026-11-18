@@ -1,7 +1,6 @@
-"use client";
+import Link from "next/link";
 
 import { Icon } from "@/components/layout/SvgSprite";
-import { useShopFilter } from "@/components/providers/ShopFilterProvider";
 import type { CategoryDTO } from "@/lib/dto";
 import { revealDelay } from "@/lib/utils";
 
@@ -23,8 +22,6 @@ export function CollectionsGrid({
   heading?: string;
   blurb?: string;
 }) {
-  const { setFilter } = useShopFilter();
-
   if (categories.length === 0) return null;
 
   return (
@@ -38,10 +35,18 @@ export function CollectionsGrid({
 
         <div className="collections-grid">
           {categories.slice(0, 4).map((category, index) => (
-            <a
+            /*
+             * Goes to the filtered catalogue rather than scrolling to the
+             * featured strip, as the original did. The strip only holds a
+             * dozen products, so a tile for a category that happens not to be
+             * among them used to narrow the grid to nothing; /shop always has
+             * the whole category. Dropping the click handler also makes this a
+             * Server Component again.
+             */
+            <Link
               key={category.id}
               className={`tile${MODIFIERS[index] ? ` ${MODIFIERS[index]}` : ""}`}
-              href="#shop"
+              href={`/shop?category=${category.slug}`}
               data-reveal
               style={
                 {
@@ -49,9 +54,6 @@ export function CollectionsGrid({
                   ...(DELAYS[index] ? revealDelay(DELAYS[index]) : {}),
                 } as React.CSSProperties
               }
-              // Follows the anchor to #shop and narrows the grid, exactly as
-              // the original's data-filter-link did.
-              onClick={() => setFilter(category.slug)}
             >
               {category.imagePath ? (
                 // eslint-disable-next-line @next/next/no-img-element -- see Hero.tsx
@@ -73,7 +75,7 @@ export function CollectionsGrid({
               <span className="tile-arrow" aria-hidden="true">
                 <Icon name="i-arrow" />
               </span>
-            </a>
+            </Link>
           ))}
         </div>
       </div>

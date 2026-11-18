@@ -20,12 +20,27 @@ export type CartLine = { id: string; qty: number };
  *  arrived, so anything saved under an older key is discarded, not misread. */
 const STORAGE_KEY = "cof-cart-v2";
 
+/**
+ * The idempotency key for whatever order this cart becomes.
+ *
+ * Minted once, when the cart first becomes non-empty, and held until the cart
+ * is cleared — so a double-click, Enter pressed twice, a browser-retried POST
+ * and a second tab all submit the *same* key and all resolve to the one order.
+ * Minting it at submit time instead would defeat the entire mechanism.
+ */
+const KEY_STORAGE_KEY = "cof-cart-key-v1";
+
 type CartItem = { product: CartCatalogEntry; qty: number };
 
 type CartContextValue = {
   items: CartItem[];
+  /** Raw stored lines — what the checkout form submits. */
+  lines: CartLine[];
   count: number;
   subtotalLabel: string;
+  subtotalValue: number;
+  currencySymbol: string;
+  idempotencyKey: string | null;
   hydrated: boolean;
   isOpen: boolean;
   open: () => void;
@@ -33,6 +48,7 @@ type CartContextValue = {
   add: (id: string) => void;
   setQty: (id: string, qty: number) => void;
   remove: (id: string) => void;
+  clear: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -47,6 +63,10 @@ export function CartProvider({
   children: React.ReactNode;
 }) {
   const [lines, setLines, hydrated] = usePersistentState<CartLine[]>(STORAGE_KEY, []);
+  const [idempotencyKey, setIdempotencyKey] = usePersistentState<string | null>(
+    KEY_STORAGE_KEY,
+    null,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
@@ -70,13 +90,19 @@ export function CartProvider({
 
   const count = useMemo(() => items.reduce((n, i) => n + i.qty, 0), [items]);
 
-  const subtotalLabel = useMemo(() => {
-    const total = items.reduce(
-      (sum, item) => sum + Number(item.product.priceValue) * item.qty,
-      0,
-    );
-    return `${currencySymbol} ${new Intl.NumberFormat("en-US").format(Math.round(total))}`;
-  }, [items, currencySymbol]);
+  /* Display only. The real total is computed server-side on Decimal from
+     database prices; this is never submitted and never trusted. */
+  const subtotalValue = useMemo(
+    () =>
+      items.reduce((sum, item) => sum + Number(item.product.priceValue) * item.qty, 0),
+    [items],
+  );
+
+  const subtotalLabel = useMemo(
+    () =>
+      `${currencySymbol} ${new Intl.NumberFormat("en-US").format(Math.round(subtotalValue))}`,
+    [subtotalValue, currencySymbol],
+  );
 
   const add = useCallback(
     (id: string) => {
@@ -88,9 +114,11 @@ export function CartProvider({
           ? current.map((line) => (line.id === id ? { ...line, qty: line.qty + 1 } : line))
           : [...current, { id, qty: 1 }];
       });
+      // Mint the key the moment the cart stops being empty, not at submit.
+      setIdempotencyKey((current) => current ?? crypto.randomUUID());
       toast(`${product.name} added to your cart`);
     },
-    [byId, setLines, toast],
+    [byId, setLines, setIdempotencyKey, toast],
   );
 
   const setQty = useCallback(
@@ -107,11 +135,22 @@ export function CartProvider({
     [setLines],
   );
 
+  /* The key is dropped with the lines: the next cart is a new order, and
+     reusing the old key would make it resolve to the previous one. */
+  const clear = useCallback(() => {
+    setLines([]);
+    setIdempotencyKey(null);
+  }, [setLines, setIdempotencyKey]);
+
   const value = useMemo(
     () => ({
       items,
+      lines,
       count,
       subtotalLabel,
+      subtotalValue,
+      currencySymbol,
+      idempotencyKey,
       hydrated,
       isOpen,
       open: () => setIsOpen(true),
@@ -119,8 +158,23 @@ export function CartProvider({
       add,
       setQty,
       remove,
+      clear,
     }),
-    [items, count, subtotalLabel, hydrated, isOpen, add, setQty, remove],
+    [
+      items,
+      lines,
+      count,
+      subtotalLabel,
+      subtotalValue,
+      currencySymbol,
+      idempotencyKey,
+      hydrated,
+      isOpen,
+      add,
+      setQty,
+      remove,
+      clear,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -7,6 +7,13 @@
    so preflight loses to the storefront and utilities still win over it. */
 @import "./storefront.css" layer(components);
 
+/* Commerce surfaces that did not exist in the original site — cart, checkout,
+   order confirmation, product detail, shop sidebar. Kept out of
+   storefront.css on purpose: that file is the fidelity baseline the
+   screenshot/computed-style diffs are measured against, and new rules in it
+   would make a real regression and a deliberate addition look the same. */
+@import "./commerce.css" layer(components);
+
 /* ============================================================
    Brand tokens — the single source of truth.
    Tailwind v4 emits these as real custom properties, so

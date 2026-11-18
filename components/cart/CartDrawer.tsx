@@ -1,17 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/layout/SvgSprite";
 import { useCart } from "@/components/providers/CartProvider";
-import { useToast } from "@/components/providers/ToastProvider";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function CartDrawer() {
-  const { items, subtotalLabel, isOpen, close, setQty, remove } = useCart();
-  const { toast } = useToast();
+  const { items, subtotalLabel, currencySymbol, isOpen, close, setQty, remove } =
+    useCart();
 
   const drawerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -127,9 +127,9 @@ export function CartDrawer() {
           <p className="cart-empty" hidden={!isEmpty}>
             Your cart is empty.
             <br />
-            <a href="#shop" onClick={close}>
-              Find something you’ll love →
-            </a>
+            <Link href="/shop" onClick={close}>
+              Browse the catalogue →
+            </Link>
           </p>
 
           <ul className="cart-list">
@@ -179,7 +179,7 @@ export function CartDrawer() {
                 </div>
 
                 <div className="cart-line">
-                  <span>{lineTotal(product.priceValue, qty)}</span>
+                  <span>{lineTotal(product.priceValue, qty, currencySymbol)}</span>
                   <button
                     type="button"
                     className="remove"
@@ -199,17 +199,10 @@ export function CartDrawer() {
             <span>Subtotal</span>
             <strong>{subtotalLabel}</strong>
           </div>
-          <p className="note">Free delivery &amp; setup included.</p>
-          <button
-            type="button"
-            className="btn btn--primary btn--block"
-            onClick={() => {
-              close();
-              toast("Checkout is coming soon — thank you for browsing!");
-            }}
-          >
-            Checkout
-          </button>
+          <p className="note">Delivery calculated at checkout.</p>
+          <Link href="/cart" className="btn btn--primary btn--block" onClick={close}>
+            Review &amp; checkout
+          </Link>
         </footer>
       </aside>
     </>
@@ -217,7 +210,7 @@ export function CartDrawer() {
 }
 
 /** Line total, formatted the same way the server formats every other amount. */
-function lineTotal(priceValue: string, qty: number): string {
+function lineTotal(priceValue: string, qty: number, symbol: string): string {
   const total = Number(priceValue) * qty;
-  return `Rs. ${new Intl.NumberFormat("en-US").format(Math.round(total))}`;
+  return `${symbol} ${new Intl.NumberFormat("en-US").format(Math.round(total))}`;
 }

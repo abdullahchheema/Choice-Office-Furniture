@@ -6,6 +6,8 @@
  * `art-lounge` is the one furniture illustration still in use; the finish
  * picker recolours it through CSS custom properties.
  */
+import Link from "next/link";
+
 export function SvgSprite() {
   return (
     <svg
@@ -173,7 +175,10 @@ export function Icon({
 /** The wordmark, used in both the header and the footer. */
 export function Logo({ label }: { label: string }) {
   return (
-    <a className="logo" href="#top" aria-label={label}>
+    /* "/" rather than the original "#top": off the homepage an anchor to a
+       section that is not on the page does nothing at all, and the wordmark is
+       where everyone clicks to get home. */
+    <Link className="logo" href="/" aria-label={label}>
       <svg className="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
         <rect width="32" height="32" rx="9" fill="currentColor" />
         <path d="M7 16.500 16 8l9 8.500V25H7z" fill="var(--oak)" />
@@ -183,6 +188,6 @@ export function Logo({ label }: { label: string }) {
         <span className="logo-name">Choice</span>
         <span className="logo-sub">Office Furniture</span>
       </span>
-    </a>
+    </Link>
   );
 }

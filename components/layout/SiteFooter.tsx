@@ -1,4 +1,8 @@
+import Link from "next/link";
+
 import { Logo } from "@/components/layout/SvgSprite";
+import { getActiveCategories, getSettingsOrNull } from "@/lib/queries";
+import { safeQuery } from "@/lib/safe";
 
 /*
  * Evaluated once at module load rather than per render.
@@ -10,56 +14,78 @@ import { Logo } from "@/components/layout/SvgSprite";
  */
 const BUILD_YEAR = new Date().getFullYear();
 
+/*
+ * The section links are homepage anchors, so they are absolute ("/#craft"):
+ * from /shop or /cart a bare "#craft" scrolls to nothing. The Shop column is
+ * no longer a hardcoded list — it reads real categories, so renaming one in
+ * the admin updates the footer too.
+ */
 const COLUMNS = [
-  {
-    label: "Shop",
-    links: [
-      { href: "#shop", text: "Living" },
-      { href: "#shop", text: "Dining" },
-      { href: "#shop", text: "Bedroom" },
-      { href: "#shop", text: "Storage & Light" },
-    ],
-  },
   {
     label: "Company",
     links: [
-      { href: "#craft", text: "Craftsmanship" },
-      { href: "#finishes", text: "Finishes" },
-      { href: "#stories", text: "Reviews" },
-      { href: "#visit", text: "Showroom" },
+      { href: "/#craft", text: "Why Choice" },
+      { href: "/#finishes", text: "Finishes" },
+      { href: "/#stories", text: "Reviews" },
+      { href: "/#visit", text: "Showroom" },
     ],
   },
   {
     label: "Help",
     links: [
-      { href: "#trust", text: "Delivery" },
-      { href: "#trust", text: "Returns" },
-      { href: "#trust", text: "Guarantee" },
-      { href: "#visit", text: "Contact" },
+      { href: "/#trust", text: "Delivery" },
+      { href: "/#trust", text: "Returns" },
+      { href: "/#trust", text: "Warranty" },
+      { href: "/#visit", text: "Contact" },
     ],
   },
 ] as const;
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const [categories, settings] = await Promise.all([
+    safeQuery("footer categories", getActiveCategories, []),
+    safeQuery("settings", getSettingsOrNull, null),
+  ]);
+
+  const shopLinks = categories.slice(0, 5).map((category) => ({
+    href: `/shop?category=${category.slug}`,
+    text: category.name,
+  }));
+
+  const columns = [
+    {
+      label: "Shop",
+      links:
+        shopLinks.length > 0
+          ? shopLinks
+          : [{ href: "/shop", text: "Everything we make" }],
+    },
+    ...COLUMNS,
+  ];
+
   return (
     <footer className="site-footer">
       <div className="shell footer-grid">
         <div className="footer-brand">
-          <Logo label="Choice Office Furniture — back to top" />
+          <Logo label={`${settings?.brandName ?? "Choice Office Furniture"} — home`} />
           <p>
-            Warm wood. Quiet design.
-            <br />
-            Furniture that works as hard as you do.
+            {settings?.tagline ?? (
+              <>
+                Warm wood. Quiet design.
+                <br />
+                Furniture that works as hard as you do.
+              </>
+            )}
           </p>
         </div>
 
-        {COLUMNS.map((column) => (
+        {columns.map((column) => (
           <nav key={column.label} aria-label={column.label}>
             <h4>{column.label}</h4>
             <ul>
               {column.links.map((link) => (
                 <li key={link.text}>
-                  <a href={link.href}>{link.text}</a>
+                  <Link href={link.href}>{link.text}</Link>
                 </li>
               ))}
             </ul>
@@ -68,7 +94,10 @@ export function SiteFooter() {
       </div>
 
       <div className="shell footer-bottom">
-        <p>© {BUILD_YEAR} Choice Office Furniture. All rights reserved.</p>
+        <p>
+          © {BUILD_YEAR} {settings?.brandName ?? "Choice Office Furniture"}. All
+          rights reserved.
+        </p>
         <p>
           Crafted with care · Photography via{" "}
           <a href="https://unsplash.com" target="_blank" rel="noopener">
