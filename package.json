@@ -2,20 +2,23 @@
   "name": "choice-office-furniture",
   "version": "0.1.0",
   "private": true,
-  "description": "Choice Office Furniture \u2014 storefront and admin dashboard",
+  "description": "Choice Office Furniture — storefront and admin dashboard",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "check:env": "node scripts/check-env.mjs",
+    "check:env:prod": "node scripts/check-env.mjs --production",
+    "security:audit": "node scripts/audit-exposure.mjs",
+    "admin:create": "tsx scripts/create-admin.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed",
-    "legacy": "python -m http.server 5174 --bind 127.0.0.1 --directory legacy"
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

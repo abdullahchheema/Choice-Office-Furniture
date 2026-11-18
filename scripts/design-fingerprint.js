@@ -3,8 +3,10 @@
  *
  * Paste/evaluate this in a page and it returns a JSON snapshot of computed
  * styles for the selectors that define the storefront's look. Run it against
- * the pre-migration site (`npm run legacy`, http://127.0.0.1:5174) and against
- * the Next.js build, then diff the two objects.
+ * a previous build (any earlier commit, `npm run dev`) and against the current
+ * one, then diff the two objects. (The original static site that served as the
+ * baseline during the migration was removed in Phase 7; it remains in git
+ * history before that commit.)
  *
  * This beats comparing screenshots for the failures most likely in this
  * migration, because it names the broken property instead of leaving you to

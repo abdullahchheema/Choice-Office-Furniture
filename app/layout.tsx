@@ -1,3 +1,4 @@
+import { siteUrl } from "@/lib/site-url";
 import type { Metadata, Viewport } from "next";
 
 import { SvgSprite } from "@/components/layout/SvgSprite";
@@ -14,10 +15,10 @@ import "./globals.css";
  * shopping cart and a scroll-reveal observer it has no use for.
  */
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const origin = siteUrl();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(origin),
   title: {
     default: "Choice Office Furniture — Workspaces built to last",
     template: "%s · Choice Office Furniture",

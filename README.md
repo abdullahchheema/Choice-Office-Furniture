@@ -1,104 +1,75 @@
 # Choice Office Furniture
 
-Office furniture storefront and admin dashboard — Next.js 16, TypeScript, Tailwind v4, PostgreSQL (Supabase) via Prisma, with WhatsApp checkout instead of a payment gateway.
+A complete office-furniture shop: a public storefront, a secure admin dashboard, and **WhatsApp checkout** instead of a payment gateway.
 
-> **Status: Phase 1 of 7 (scaffold).** The storefront migration, database, admin dashboard and checkout land in the phases that follow. See `.claude/plans/` for the full plan.
+Next.js 16 (App Router) · TypeScript · Tailwind v4 · PostgreSQL on Supabase via Prisma 7 · Supabase Storage for photos.
 
----
+## What it does
 
-## Requirements
+**Storefront** — catalogue with category, price, availability, search, sort and paging; premium product pages with image galleries; a cart; a checkout that **saves the order to the database first**, then hands the customer to WhatsApp with the order already written out.
 
-- Node.js ≥ 20.9 (developed on 24.17)
-- npm (no pnpm/yarn/bun lockfiles in this repo)
-- A Supabase project — Postgres plus a Storage bucket
+**Products** — *simple* (one price, one stock count) or *variable* (colour, material, size, configuration — any options you invent). Every variant has its own SKU, regular and compare-at price (the discount % and sale badge are calculated), stock, photos and specifications.
 
-## Setup
+**Admin** (`/admin`) — overview, products and variants, categories, orders with a status workflow, customers, inventory with a full ledger, homepage content, website settings (including the WhatsApp number), and profile.
+
+**Inventory** — stock is per variant and only moves when an order is **confirmed**, restoring on cancellation. Every change is written to a ledger that must reconcile with the stored figure.
+
+## Quick start (development)
+
+Requires Node ≥ 20.9 and a Supabase project (Postgres + a Storage bucket).
 
 ```bash
 npm install
+cp .env.example .env.local        # then fill it in — every value is documented inside
+npm run check:env                 # validates it before anything else fails confusingly
+npm run db:deploy                 # apply migrations
+npm run db:seed                   # categories, settings, demo catalogue, first admin
+npm run dev                       # http://localhost:3000
 ```
 
-Then create `.env.local` from the template and fill it in:
+Sign in at `/admin/login` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`. Set your real WhatsApp number at **Admin → Settings** — until you do, the dashboard shows a warning, because customers would be sent to a placeholder.
 
-```bash
-cp .env.example .env.local
-```
+> Two connection strings are required and they differ: the app uses the **transaction pooler (port 6543)**; migrations need the **direct connection (port 5432)**. The database password is under *Supabase → Project Settings → Database* and is not any of the API keys.
 
-Every value is documented in `.env.example`. Two notes that cost time if missed:
+## Commands
 
-- **`DATABASE_URL` and `DIRECT_URL` are both required and are different.** The app talks to Supabase through the transaction pooler on port **6543**; `prisma migrate` cannot use it (no prepared statements) and needs the direct connection on port **5432**. The database password is under *Supabase → Project Settings → Database*, and is **not** any of the API keys.
-- **`SUPABASE_SERVICE_ROLE_KEY` bypasses row-level security.** It is server-only: no `NEXT_PUBLIC_` prefix, never imported into a client component. `.env.local` is gitignored — keep it that way.
+| | |
+|---|---|
+| `npm run dev` / `build` / `start` | develop, build (generates the Prisma client first), serve |
+| `npm run typecheck` / `lint` | static checks |
+| `npm run check:env` / `check:env:prod` | validate the environment (the second is what a live deploy needs) |
+| `npm run db:deploy` | apply migrations (production-safe) |
+| `npm run db:migrate` | create/apply migrations in development |
+| `npm run db:seed` | seed data; `SEED_CATALOG=none` skips the demo products |
+| `npm run admin:create -- --email you@shop.pk` | create an admin (hidden password prompt); `--reset` to set a new password |
+| `npm run security:audit` | prove the public Supabase key can reach nothing |
+| `npm run db:studio` | browse the data |
 
-Generate the admin session signing key with:
+## Deploying
 
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-```
+See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — environment, migrations, first admin, Supabase hardening, and the post-launch checklist.
 
-## Running
+## Architecture notes
 
-```bash
-npm run dev       # http://localhost:3000
-npm run legacy    # http://127.0.0.1:5174 — the pre-migration static site
-npm run build
-npm run typecheck
-npm run lint
-```
+- **Money is `Decimal(12,2)` everywhere**, never a float, and is computed server-side. The cart stores variant ids and quantities only; checkout re-reads every price from the database, so a tampered client price changes nothing.
+- **Two-layer admin auth.** `proxy.ts` redirects signed-out visitors (a UX convenience, not the boundary). `requireAdmin()` re-checks the session *and the database* in every admin page, Server Action and route handler — a Server Action is its own HTTP entry point and can be called without visiting its page. `sessionEpoch` revokes stateless tokens instantly.
+- **Order references and privacy.** `ORD-2026-0001` is sequential and therefore guessable, so personal details are shown only to the browser that placed the order.
+- **Variants are the sellable unit.** A simple product is a product with one default variant, so the cart, orders and ledger never branch on product type. `Product.minPrice` is a denormalised sort key kept in step by `syncProductSummary()`.
+- **Uploads** are sniffed by magic bytes (not extension or MIME), re-encoded to WebP through `sharp`, size- and pixel-capped, and stored under generated keys.
+- **Row-level security is on for every table** and the anon/authenticated roles are revoked — see below.
 
-`npm run legacy` serves the original static site from `legacy/`, which exists purely as the visual reference for the migration. It is deleted in Phase 7. Use `127.0.0.1` rather than `localhost`: Python binds IPv4 only, and on Windows `localhost` can resolve to IPv6.
+### Prisma 7 specifics
 
-## Database (from Phase 3)
+`url`/`directUrl` are gone from `schema.prisma`: the CLI connection is in `prisma.config.ts` (→ `DIRECT_URL`), the runtime connection is a driver adapter in `lib/prisma.ts` (→ pooled `DATABASE_URL`). The CLI does not read `.env`, so the config loads `.env.local` itself. CLI and client are pinned to the same exact version — npm's `latest` for the CLI is currently an `8.0.0` release candidate, so change both together or neither.
 
-```bash
-npm run db:migrate    # create/apply migrations in development
-npm run db:seed       # categories, settings, first admin, starter catalog
-npm run db:studio     # browse the data
-npm run db:deploy     # apply migrations in production
-```
+### Supabase lock-down
 
-Prisma's CLI and client are pinned to the **same exact version (7.10.1)** on purpose: npm's `latest` tag for the `prisma` CLI is currently an `8.0.0` release candidate while `@prisma/client` is on stable `7.10.1`, so an unpinned install produces a CLI/client mismatch. Change both together or neither.
+Supabase exposes every table in `public` over REST and the anon key is public. A fresh Supabase table is readable and writable by that key. The migration `20261118120000_lock_down_public_schema` enables RLS on every table and revokes the grants; the app is unaffected because Prisma connects as the table owner. **A table added by a future migration does not inherit this** — run `npm run security:audit` after adding one.
 
-### Prisma 7 differences worth knowing
+### Styling
 
-Prisma 7 moved things that most tutorials still show in the old places:
+`app/storefront.css` is the original stylesheet ported near-verbatim; `app/commerce.css` holds the commerce surfaces added later. Both are imported into `layer(components)`: unlayered CSS beats *all* layered CSS, so importing them plainly would make `.btn` defeat every Tailwind utility. Three legacy names were changed because they collided silently with Tailwind/shadcn (`--muted`→`--text-muted`, `--radius`→`--radius-card`, `.container`→`.shell`); `.field` is also taken (newsletter pill) so forms use `.form-field`. `scripts/design-fingerprint.js` snapshots computed styles for regression checks.
 
-- **`url` and `directUrl` are gone from `schema.prisma`.** The CLI's connection lives in `prisma.config.ts` and points at `DIRECT_URL`; the app's connection comes from a **driver adapter** in `lib/prisma.ts` and points at the pooled `DATABASE_URL`. That split is deliberate — migrations cannot run through Supabase's transaction pooler.
-- **The CLI does not read `.env` files.** `prisma.config.ts` loads `.env.local` explicitly via dotenv.
-- **The seed command** is `migrations.seed` in `prisma.config.ts`, not `prisma.seed` in `package.json`.
-- **`prisma migrate diff`** takes `--to-schema`, not the older `--to-schema-datamodel`.
+## Quality record
 
-## Layout
-
-```
-app/
-  globals.css        brand tokens (@theme), legacy aliases, shadcn semantic layer
-  storefront.css     the original stylesheet, ported near-verbatim
-  layout.tsx         fonts, <html class="js">, providers
-components/
-lib/
-legacy/              pre-migration static site — reference only, removed in Phase 7
-public/assets/       decorative imagery (hero, craft, showroom)
-prisma/              schema, migrations, seed  (Phase 3)
-```
-
-### Three renames worth knowing about
-
-`storefront.css` is the original stylesheet with its `:root` block removed and three names changed. Each collided with Tailwind or shadcn/ui, and each failed *silently* — nothing errors, the page just renders subtly wrong:
-
-| Original | Now | What went wrong without it |
-|---|---|---|
-| `--muted` | `--text-muted` | The storefront uses it as a *text* colour; shadcn uses `--muted` as a *surface*. Every piece of secondary copy renders beige-on-beige. |
-| `--radius` | `--radius-card` | Storefront `22px` vs shadcn `0.625rem`. Every card, tile and the cart drawer loses its corner radius. |
-| `.container` | `.shell` | Tailwind v4 ships its own `container` utility, and utilities sort *after* the storefront layer, so it won the page width — 1280px instead of 1240px. |
-
-The third was caught by the fingerprint diff rather than by eye, which is the argument for running it.
-
-`storefront.css` is imported into `layer(components)`. That is deliberate: unlayered CSS beats *all* layered CSS, so importing it plainly would make `.btn` defeat every Tailwind utility. In `components`, Tailwind's preflight loses to the storefront and utilities still win over it.
-
-### Display-font weights
-
-The original loaded Fraunces at weights 700–900 only, so rules asking for 500 or 600 were silently clamped up to 700 by the browser. `next/font` serves the full variable range, where 500 renders a genuinely lighter and narrower face — which re-wrapped the testimonial quotes a line shorter. Seven rules now state `font-weight: 700` explicitly. `next/font` cannot combine `axes` with specific weights, and keeping the `opsz` axis matters more, since it governs the letterforms of every heading.
-
-### Checking fidelity
-
-`scripts/design-fingerprint.js` snapshots computed styles for 37 selectors. Run it in both the legacy site and the Next build and diff the results — it names the broken property instead of leaving you to spot a few pixels.
+`docs/PHASE6-TEST-REPORT.md` lists what was attacked, what broke and was fixed, and the known limitations — including the ones that were deliberately left.

@@ -43,7 +43,15 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // robots.txt only discourages crawling; this is what actually keeps
+      // private and per-visitor pages out of search results.
+      ...["/admin/:path*", "/cart", "/checkout", "/orders/:path*"].map((source) => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      })),
+    ];
   },
 
   /**

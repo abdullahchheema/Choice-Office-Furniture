@@ -33,10 +33,11 @@ const COLUMNS = [
   {
     label: "Help",
     links: [
-      { href: "/#trust", text: "Delivery" },
-      { href: "/#trust", text: "Returns" },
-      { href: "/#trust", text: "Warranty" },
-      { href: "/#visit", text: "Contact" },
+      { href: "/delivery", text: "Delivery" },
+      { href: "/returns", text: "Returns and warranty" },
+      { href: "/privacy", text: "Privacy" },
+      { href: "/terms", text: "Terms of sale" },
+      { href: "/contact", text: "Contact" },
     ],
   },
 ] as const;

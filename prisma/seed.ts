@@ -13,6 +13,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
 
+import { PLACEHOLDER_WHATSAPP } from "../lib/settings-constants";
+
 loadEnv({ path: ".env.local" });
 loadEnv();
 
@@ -430,7 +432,7 @@ async function main() {
       brandName: "Choice Office Furniture",
       tagline: "Warm wood. Quiet design. Furniture that works as hard as you do.",
       // Placeholder — changed at /admin/settings, never in code.
-      whatsappE164: "+923000000000",
+      whatsappE164: PLACEHOLDER_WHATSAPP,
       whatsappDisplay: "0300 0000000",
       email: "hello@choiceofficefurniture.pk",
       addressLine: "214 Maple Row",
@@ -498,6 +500,9 @@ async function main() {
   }
   console.log(`  ✓ ${CATEGORIES.length} categories`);
 
+  // Production installs skip the demo catalogue: SEED_CATALOG=none
+  const withCatalog = process.env.SEED_CATALOG !== "none";
+
   // --- specification templates ---
   for (const [slug, templates] of Object.entries(SPEC_TEMPLATES)) {
     const category = await prisma.category.findUniqueOrThrow({ where: { slug } });
@@ -512,6 +517,7 @@ async function main() {
   }
   console.log(`  ✓ specification templates for ${Object.keys(SPEC_TEMPLATES).length} categories`);
 
+  if (withCatalog) {
   // --- simple products: a product with one default variant ---
   for (const [index, product] of PRODUCTS.entries()) {
     const category = await prisma.category.findUniqueOrThrow({
@@ -724,6 +730,10 @@ async function main() {
     }, { timeout: 120_000, maxWait: 15_000 }); // many round trips to a remote database
   }
   console.log(`  ✓ ${VARIABLE_PRODUCTS.length} variable products with options, variants and per-variant photos`);
+
+  } else {
+    console.log("  — demo catalogue skipped (SEED_CATALOG=none)");
+  }
 
   // --- homepage content ---
   for (const section of HOMEPAGE_SECTIONS) {

@@ -11,6 +11,7 @@ import { normalisePhonePK } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/queries";
 import { RateLimitError, clientIp, enforceRateLimit } from "@/lib/rate-limit";
+import { siteUrl } from "@/lib/site-url";
 import { variantLabel } from "@/lib/variants";
 import { renderOrderMessage, type WhatsappOrderLine } from "@/lib/whatsapp";
 
@@ -315,7 +316,8 @@ export async function submitCheckout(
 
   /* ------------------------------------------------------- 5. write, in one go */
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const orderSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ? siteUrl() : undefined;
 
   let orderNumber: string;
   try {
@@ -377,7 +379,7 @@ export async function submitCheckout(
         shippingFee: toMoneyString(shippingFee),
         total: toMoneyString(total),
         itemCount,
-        siteUrl,
+        siteUrl: orderSiteUrl,
       });
 
       await tx.order.create({

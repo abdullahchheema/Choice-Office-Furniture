@@ -13,6 +13,10 @@ adjustments); the catalogue was left exactly as seeded.
 | 3 | URL fuzz | `/shop?q=%00` returned **500** (Postgres rejects NUL bytes) | control characters stripped; array-valued params tolerated |
 | 4 | UI replay | A product unpublished while in a cart made checkout fail with "remove it" for an item the customer **could not see** | cart submits only the lines it displays |
 
+| 5 | **Phase 7 audit** (missed by every Phase 6 test, which went through the app) | **The public Supabase anon key had full read/write on every table** — it could read `admin_users` including the password hash, would have exposed every customer's name/phone/address, and could insert and delete rows. Supabase exposes `public` over REST and grants anon access by default. | Migration `20261118120000_lock_down_public_schema`: RLS on for every table, anon/authenticated grants revoked (the app connects as the owner, which bypasses RLS). `npm run security:audit` proves it; run it after any migration that adds a table. |
+
+> Lesson recorded: tests that exercise the app cannot find a hole that sits *beside* it. The audit for this class of problem has to probe the database's other doors directly.
+
 ## Passed without changes
 
 **Authentication** — every `/admin/*` route redirects; forged, `alg=none` and empty

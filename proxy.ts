@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, readSessionToken } from "@/lib/auth/session";
 
 /**
- * Redirects signed-out visitors away from /admin.
+ * Redirects signed-out visitors away from /admin. (Next 16 renamed the `middleware` file convention to `proxy`.)
  *
  * This is a UX convenience, NOT the security boundary. It runs on the Edge
  * runtime, so it cannot reach the database — it can only confirm that a token
@@ -14,7 +14,7 @@ import { SESSION_COOKIE, readSessionToken } from "@/lib/auth/session";
  * admin page, Server Action and route handler calls it. Nothing here is
  * trusted for authorization.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   const claims = await readSessionToken(

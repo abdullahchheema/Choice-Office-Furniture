@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -36,9 +37,9 @@ export function PasswordForm() {
           className="rounded-md border border-oak bg-sand/40 px-3 py-2 text-sm font-semibold text-espresso"
         >
           {state.message}{" "}
-          <a className="underline" href="/admin/login">
+          <Link className="underline" href="/admin/login">
             Sign in again
-          </a>
+          </Link>
         </p>
       ) : null}
 

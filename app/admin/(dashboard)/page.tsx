@@ -5,6 +5,7 @@ import { getDashboardStats } from "@/lib/admin/stats";
 import { formatMoney } from "@/lib/money";
 import { getSettingsOrNull } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe";
+import { PLACEHOLDER_WHATSAPP } from "@/lib/settings-constants";
 
 export const metadata = { title: "Overview" };
 
@@ -49,6 +50,21 @@ export default async function AdminOverviewPage() {
           Live figures from the database — nothing here is a placeholder.
         </p>
       </header>
+
+      {/* The seed installs a placeholder so the site runs out of the box. Left
+          in place, every customer is sent to a number nobody owns. */}
+      {settings?.whatsappE164 === PLACEHOLDER_WHATSAPP ? (
+        <Link
+          href="/admin/settings"
+          className="flex items-center gap-3 rounded-card border border-destructive/40 bg-destructive/5 px-5 py-4 transition-colors hover:bg-destructive/10"
+        >
+          <AlertTriangle size={20} className="shrink-0 text-destructive" aria-hidden="true" />
+          <span className="text-sm font-semibold text-destructive">
+            The WhatsApp number is still the placeholder. Customers who tap
+            “Open WhatsApp” are sent to a number nobody owns — set yours in Settings.
+          </span>
+        </Link>
+      ) : null}
 
       {pending > 0 ? (
         <Link
