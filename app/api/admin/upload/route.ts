@@ -17,7 +17,13 @@ import { resolveImageSrc } from "@/lib/storage/resolve";
  */
 export const runtime = "nodejs";
 
-const MAX_BYTES = 8 * 1024 * 1024;
+/*
+ * 4 MB, not more: Vercel rejects any request body over 4.5 MB before it reaches
+ * this code (a bare 413 with no JSON), so a higher cap here would only ever be
+ * hit on other hosts. The admin UI shrinks large photos in the browser first
+ * (components/admin/ProductImages.tsx), so this is a backstop, not the normal path.
+ */
+const MAX_BYTES = 4 * 1024 * 1024;
 
 /*
  * image/svg+xml is deliberately absent. An SVG is a document that can carry

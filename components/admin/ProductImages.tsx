@@ -10,6 +10,46 @@ import {
   setPrimaryImage,
 } from "@/lib/actions/images";
 
+/** Largest body the server accepts, with headroom for the form fields. */
+const TARGET_BYTES = 3.5 * 1024 * 1024;
+const MAX_EDGE = 2400;
+
+/**
+ * Shrinks a large photo in the browser before upload.
+ *
+ * Phone cameras produce 5-12 MB JPEGs, and the host rejects request bodies
+ * over 4.5 MB outright. The server re-encodes to WebP at 2000px anyway, so
+ * nothing visible is lost by doing the heavy lifting here first. Small files
+ * pass through untouched; if the browser cannot decode the file the original is
+ * sent and the server's own validation decides.
+ */
+async function shrinkForUpload(file: File): Promise<File> {
+  if (file.size <= TARGET_BYTES) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    for (const quality of [0.88, 0.78, 0.66]) {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/webp", quality),
+      );
+      if (blob && blob.size <= TARGET_BYTES) {
+        return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", {
+          type: "image/webp",
+        });
+      }
+    }
+  } catch {
+    // fall through to the original
+  }
+  return file;
+}
+
 type Image = { id: string; src: string; alt: string; isPrimary: boolean };
 
 /**
@@ -54,7 +94,7 @@ export function ProductImages({
     setUploading(true);
     try {
       const body = new FormData();
-      body.set("file", file);
+      body.set("file", await shrinkForUpload(file));
       body.set("productId", productId);
       if (variantId) body.set("variantId", variantId);
       body.set("altText", altText.trim());

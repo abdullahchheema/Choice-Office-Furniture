@@ -84,6 +84,7 @@ Notes:
 
 - The homepage, `/cart` and `/checkout` are prerendered at build, so **the database must be reachable during the build** and migrated first. Admin saves refresh the storefront on demand; the homepage also revalidates daily as a backstop.
 - Rate limiting reads the client address from `X-Forwarded-For`. That is correct on Vercel and behind Cloudflare; it would be spoofable if the Node server were exposed directly to the internet. Keep it behind a trusted proxy.
+- **Vercel limits:** request bodies over **4.5 MB** are rejected before reaching the app, so the photo upload caps at 4 MB and the admin shrinks larger photos in the browser first. Vercel's free *Hobby* plan is licensed for non-commercial use only — a real shop needs *Pro*. For speed, set Settings → Functions → Region to **Mumbai (bom1)**, next to the `ap-south-1` database.
 - HTTPS is assumed: session cookies are `Secure` in production and HSTS is sent.
 
 ## 6. Post-launch checklist
